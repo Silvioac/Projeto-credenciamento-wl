@@ -19,6 +19,12 @@ No painel do Supabase: **Authentication → Users → Add user → Create new us
 Preencha e-mail e senha e marque **Auto Confirm User**. Crie um usuário por pessoa ou por
 tablet da recepção (facilita revogar depois). Só quem tem login consegue ver a base de dados.
 
+**A senha precisa ser forte.** Com o site publicado, a página de login fica acessível a
+qualquer pessoa na internet; a senha é a única barreira entre um estranho e os dados pessoais
+de centenas de participantes (nome, telefone e e-mail). Use no mínimo 12 caracteres, sem
+sequências óbvias, e troque qualquer senha provisória antes de divulgar o link.
+Para trocar: **Authentication → Users → clique no usuário → Reset password**.
+
 ### 2. Desligar o cadastro público de contas (obrigatório)
 
 **Authentication → Sign In / Providers → Email → desmarque "Allow new users to sign up"**.
@@ -80,23 +86,55 @@ A base pertence à WL Atacadista; o CSV também pode ser gerado pelo painel do S
 
 ## Publicar (Vercel)
 
-1. Suba o projeto para um repositório Git (GitHub, GitLab ou Bitbucket). O `.gitignore` já
-   impede o envio de `.env.local`.
-2. Em [vercel.com](https://vercel.com) → **Add New → Project** → importe o repositório.
-   Framework detectado: Next.js. Build: `next build` (padrão). Não mude nada.
-3. Em **Environment Variables**, adicione (Production, Preview e Development):
-   - `NEXT_PUBLIC_SUPABASE_URL` = `https://fcbpcrakjakyagcvbxqq.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = a chave *publishable* (`sb_publishable_…`) em
-     Supabase → Project Settings → API Keys
-4. **Deploy**. Em 1–2 minutos o site fica em `https://<nome>.vercel.app`.
-5. **Domínio próprio**: Vercel → Project → Settings → Domains → Add → digite
-   `evento.seudominio.com.br`. A Vercel mostra o registro DNS a criar no provedor do domínio
-   (normalmente um `CNAME` apontando para `cname.vercel-dns.com`). HTTPS é automático.
-6. No Supabase, em **Authentication → URL Configuration**, coloque o domínio final em
-   **Site URL** e em **Redirect URLs**.
-7. Divulgue `https://<domínio>/inscricao` no QR code do material gráfico.
+O projeto está em https://github.com/Silvioac/Projeto-credenciamento-wl e o `.gitignore` já
+impede o envio do `.env.local`.
+
+1. Em [vercel.com](https://vercel.com), entre com a conta do GitHub.
+2. **Add New → Project** → importe `Projeto-credenciamento-wl`.
+3. Em **Project Name**, use `credenciamento-wl`. Isso define o endereço
+   `https://credenciamento-wl.vercel.app`.
+4. Framework detectado: Next.js. Não mude comando de build nem diretório.
+5. Em **Environment Variables**, adicione três (marcando Production, Preview e Development):
+
+   | Nome | Valor |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://fcbpcrakjakyagcvbxqq.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | a chave *publishable* (`sb_publishable_…`) em Supabase → Project Settings → API Keys |
+   | `CRON_SECRET` | uma senha aleatória qualquer; protege a rota que mantém o banco ativo |
+
+6. **Deploy**. Em 1 a 2 minutos o site fica no ar.
+7. No Supabase, em **Authentication → URL Configuration**, coloque o endereço final em
+   **Site URL**.
+8. Divulgue `https://credenciamento-wl.vercel.app/inscricao` no QR code do material gráfico.
+
+**Domínio próprio:** Vercel → Project → Settings → Domains → Add → digite
+`evento.seudominio.com.br`. A Vercel mostra o registro DNS a criar no provedor do domínio
+(normalmente um `CNAME` apontando para `cname.vercel-dns.com`). HTTPS é automático.
 
 Cada `git push` na branch principal gera um novo deploy automaticamente.
+
+## Impedir a pausa do banco (plano gratuito)
+
+O plano gratuito do Supabase **pausa** projetos que passam 7 dias sem nenhuma requisição, e
+um projeto pausado precisa ser religado à mão no painel. Para isso não acontecer, o sistema
+se auto-visita todo dia:
+
+- `vercel.json` agenda um *cron job* diário (09:00 UTC, 06:00 em Brasília).
+- Ele chama `/api/manter-ativo`, que executa a função `manter_ativo()` no banco. Essa função
+  só devolve a hora do servidor: não lê, não grava e não toca em dados de participantes.
+- A variável `CRON_SECRET` na Vercel garante que só o cron consiga acionar a rota. A Vercel
+  envia esse valor sozinha; você não precisa fazer nada além de cadastrá-la.
+
+**Conferir se está funcionando:** Vercel → Project → **Cron Jobs** mostra a última execução e
+o resultado. Também dá para chamar a rota manualmente pelo terminal:
+
+```bash
+curl -H "Authorization: Bearer SEU_CRON_SECRET" https://credenciamento-wl.vercel.app/api/manter-ativo
+```
+
+A resposta esperada é `{"ok":true,...,"horaDoBanco":"..."}`. Se um dia o projeto for pausado
+mesmo assim, basta abrir o painel do Supabase e clicar em **Restore project**; nenhum dado se
+perde.
 
 ## Teste manual do modo offline (DevTools)
 
