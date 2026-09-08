@@ -32,7 +32,7 @@ export function Comprovante({ codigo, nome, telefone, profissao, email, criadoEm
   return (
     <section id="comprovante" aria-label="Comprovante de inscrição" className="mt-3.5 rounded-cartao border border-linha bg-white p-6">
       <div className="mb-3.5 flex items-center justify-between gap-2.5 border-b-2 border-azul pb-3">
-        <Logo altura={30} />
+        <Logo className="h-[30px] w-auto shrink-0" />
         <div className="text-right text-[13px] font-extrabold leading-tight text-azul-escuro">
           COMPROVANTE DE INSCRIÇÃO
           <span className="block text-[10.5px] font-semibold text-tinta-2">

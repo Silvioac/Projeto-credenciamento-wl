@@ -50,7 +50,7 @@ export function Painel({ base, podeExportar = true }: { base: BaseInscritos; pod
       </div>
 
       <div className="grid gap-3.5 lg:grid-cols-[1.2fr_1fr]">
-        <section className="rounded-cartao border border-linha bg-superficie p-5" aria-label="Perfil do público por profissão">
+        <section className="min-w-0 rounded-cartao border border-linha bg-superficie p-5" aria-label="Perfil do público por profissão">
           <h2 className="mb-3.5 text-[14px] font-bold text-azul-escuro">Perfil do público por profissão</h2>
           {dados.profissoes.length === 0 ? (
             <p className="py-6 text-center text-[14px] text-tinta-2">Nenhuma inscrição ainda.</p>
@@ -77,7 +77,7 @@ export function Painel({ base, podeExportar = true }: { base: BaseInscritos; pod
           <p className="mt-2 text-[11px] text-tinta-2">Barra clara: inscritos · barra escura: presentes.</p>
         </section>
 
-        <section className="rounded-cartao border border-linha bg-superficie p-5" aria-label="Últimas entradas">
+        <section className="min-w-0 rounded-cartao border border-linha bg-superficie p-5" aria-label="Últimas entradas">
           <h2 className="mb-3.5 text-[14px] font-bold text-azul-escuro">Últimas entradas</h2>
           {dados.ultimasEntradas.length === 0 ? (
             <p className="py-6 text-center text-[14px] text-tinta-2">Nenhuma entrada registrada ainda.</p>

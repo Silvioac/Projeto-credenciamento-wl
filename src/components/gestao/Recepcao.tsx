@@ -25,8 +25,9 @@ const LIMITE_COM_BUSCA = 40;
 
 function ItemInscrito({ inscrito, aoConfirmar, ocupado }: { inscrito: Inscrito; aoConfirmar: () => void; ocupado: boolean }) {
   return (
-    <li className="mb-2 flex items-center gap-3 rounded-xl border border-linha bg-white px-3.5 py-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-azul-suave text-[14px] font-bold text-azul-escuro">
+    <li className="mb-2 flex min-w-0 items-center gap-2.5 rounded-xl border border-linha bg-white px-3 py-3 sm:gap-3 sm:px-3.5">
+      {/* Em telas bem estreitas o avatar sai: o espaço vale mais para o nome. */}
+      <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full bg-azul-suave text-[14px] font-bold text-azul-escuro min-[380px]:flex">
         {iniciais(inscrito.nome)}
       </div>
       <div className="min-w-0 flex-1">
@@ -38,7 +39,11 @@ function ItemInscrito({ inscrito, aoConfirmar, ocupado }: { inscrito: Inscrito; 
       </div>
       {inscrito.presente ? (
         <span className="shrink-0 rounded-full bg-ok-suave px-2.5 py-1 text-[11px] font-bold text-ok">
-          Presente · {formatarHora(inscrito.hora_entrada)}
+          {/* Em tela estreita fica só o ✓ e a hora; a cor verde já diz o resto. */}
+          <span className="sr-only">Presente às </span>
+          <span aria-hidden className="min-[430px]:hidden">✓ </span>
+          <span aria-hidden className="hidden min-[430px]:inline">Presente · </span>
+          {formatarHora(inscrito.hora_entrada)}
         </span>
       ) : (
         <button
@@ -47,7 +52,7 @@ function ItemInscrito({ inscrito, aoConfirmar, ocupado }: { inscrito: Inscrito; 
           disabled={ocupado}
           className="shrink-0 rounded-[9px] bg-azul-escuro px-3 py-2 text-[12.5px] font-bold text-white hover:bg-azul-noite disabled:opacity-60"
         >
-          Confirmar entrada
+          Confirmar<span className="hidden min-[430px]:inline"> entrada</span>
         </button>
       )}
     </li>
@@ -127,7 +132,7 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
     <>
       <ConfirmacaoCheckin resultado={confirmacao} aoFechar={fecharConfirmacao} />
       <div className="grid gap-3.5 md:grid-cols-2">
-        <section className="rounded-cartao border border-linha bg-superficie p-5">
+        <section className="min-w-0 rounded-cartao border border-linha bg-superficie p-5">
           <h1 className="mb-1 text-[22px] font-bold text-azul-escuro">Check-in de participantes</h1>
           <p className="mb-4 text-[13.5px] text-tinta-2">
             Leia o QR code da credencial ou busque pelo nome, e-mail ou código.
@@ -166,7 +171,12 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
               {base.inscritos.length} na base local
               {base.atualizadoEm ? ` · atualizada às ${formatarHora(new Date(base.atualizadoEm).toISOString())}` : ""}
             </span>
-            <button type="button" onClick={() => void base.atualizar()} disabled={base.atualizando} className="font-semibold text-azul-escuro hover:underline disabled:opacity-60">
+            <button
+              type="button"
+              onClick={() => void base.atualizar()}
+              disabled={base.atualizando}
+              className="-mr-2 inline-flex min-h-8 shrink-0 items-center rounded px-2 font-semibold text-azul-escuro hover:underline disabled:opacity-60"
+            >
               {base.atualizando ? "Atualizando…" : "Atualizar"}
             </button>
           </div>
@@ -181,7 +191,7 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
               Use o cadastro rápido ao lado.
             </p>
           ) : (
-            <ul aria-label="Participantes">
+            <ul aria-label="Participantes" className="min-w-0">
               {resultados.map((i) => (
                 <ItemInscrito key={i.codigo} inscrito={i} ocupado={ocupado} aoConfirmar={() => void confirmar(i.codigo)} />
               ))}
@@ -189,7 +199,7 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
           )}
         </section>
 
-        <section className="rounded-cartao border border-linha bg-superficie p-5">
+        <section className="min-w-0 rounded-cartao border border-linha bg-superficie p-5">
           <FormularioInscricao
             prefixoId="porta"
             titulo="Cadastro rápido na porta"

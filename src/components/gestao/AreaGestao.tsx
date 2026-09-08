@@ -81,7 +81,7 @@ export function AreaGestao() {
             {sessao.estado === "ok" ? (
               <>
                 <span
-                  className="hidden rounded-full bg-azul-suave px-2.5 py-1 text-[11px] font-bold text-azul-escuro sm:inline"
+                  className="hidden min-h-9 items-center rounded-full bg-azul-suave px-3 py-1.5 text-[11px] font-bold text-azul-escuro sm:inline-flex"
                   title={sessao.email}
                 >
                   {NOME_PERFIL[perfil.perfil]}
@@ -89,7 +89,7 @@ export function AreaGestao() {
                 <button
                   type="button"
                   onClick={() => void sair()}
-                  className="rounded-full border border-linha px-2.5 py-1 text-[11px] font-bold text-tinta-2 hover:border-azul hover:text-azul-escuro"
+                  className="inline-flex min-h-9 items-center rounded-full border border-linha px-3 py-1.5 text-[11px] font-bold text-tinta-2 hover:border-azul hover:text-azul-escuro"
                   title={sessao.email}
                 >
                   Sair

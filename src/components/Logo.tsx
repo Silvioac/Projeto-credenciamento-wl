@@ -1,27 +1,31 @@
 import Image from "next/image";
 import { evento } from "@/config/evento";
 
+/** Proporção dos arquivos de logo. */
+const LARGURA = 488;
+const ALTURA = 118;
+
 interface Props {
   /** `clara` para fundos azuis/escuros. */
   variante?: "escura" | "clara";
-  altura?: number;
+  /**
+   * Altura por classe do Tailwind (e não por style), para poder variar com a
+   * largura da tela — em celular de 320px a logo precisa encolher, senão empurra
+   * os botões do cabeçalho para fora.
+   */
   className?: string;
 }
 
-/** Logo do organizador (arquivos definidos em config/evento.ts). */
-export function Logo({ variante = "escura", altura = 44, className }: Props) {
+export function Logo({ variante = "escura", className = "h-10 w-auto" }: Props) {
   const src = variante === "clara" ? evento.logoClara : evento.logoEscura;
-  // Proporção das logos: 488 x 118
-  const largura = Math.round((altura * 488) / 118);
   return (
     <Image
       src={src}
       alt={evento.organizador}
-      width={largura}
-      height={altura}
+      width={LARGURA}
+      height={ALTURA}
       priority
       className={className}
-      style={{ height: altura, width: "auto" }}
     />
   );
 }

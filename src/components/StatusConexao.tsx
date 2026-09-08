@@ -32,7 +32,7 @@ export function StatusConexao() {
       onClick={() => void sincronizarFila()}
       title="Clique para sincronizar agora"
       aria-live="polite"
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${classe}`}
+      className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${classe}`}
     >
       <span
         aria-hidden

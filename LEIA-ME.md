@@ -25,6 +25,24 @@ de centenas de participantes (nome, telefone e e-mail). Use no mínimo 12 caract
 sequências óbvias, e troque qualquer senha provisória antes de divulgar o link.
 Para trocar: **Authentication → Users → clique no usuário → Reset password**.
 
+### 1b. Definir o perfil de cada usuário
+
+Há dois perfis:
+
+| Perfil | O que faz |
+|---|---|
+| **Recepção** | Busca, check-in por câmera ou por código, cadastro rápido na porta |
+| **Administrativo** | Tudo da recepção, mais o Painel e as exportações em CSV e PDF |
+
+Depois de criar o usuário, cadastre o perfil dele: Supabase → **Table Editor → perfis →
+Insert row**. Preencha `usuario_id` (copie o id em Authentication → Users), `perfil`
+(`recepcao` ou `admin`) e, se quiser, `nome`. **Quem não tiver linha nessa tabela entra como
+recepção**, que é o perfil menos privilegiado — o padrão seguro.
+
+O perfil recepção é barrado no próprio banco, não só na tela: um gatilho impede alterar
+nome, telefone, profissão, e-mail ou origem de um participante e impede desfazer uma entrada
+já registrada. Isso vale mesmo para quem tentar chamar a API por fora do sistema.
+
 ### 2. Desligar o cadastro público de contas (obrigatório)
 
 **Authentication → Sign In / Providers → Email → desmarque "Allow new users to sign up"**.
@@ -84,10 +102,15 @@ Atualiza em tempo real; se o canal cair, atualiza a cada 20 s.
 
 ### Ao final: exportar a base
 
-**Painel → Exportar CSV (base completa)**. O arquivo usa `;` como separador e UTF-8 com BOM,
-abre direto no Excel em português com acentos corretos. Colunas: código, nome, telefone,
-profissão, e-mail, presente, hora de entrada, origem, data da inscrição, id.
-A base pertence à WL Atacadista; o CSV também pode ser gerado pelo painel do Supabase
+No Painel, com perfil administrativo, há duas saídas:
+
+- **Exportar planilha (CSV)** — separador `;` e UTF-8 com BOM, abre direto no Excel em
+  português com acentos corretos. Colunas: código, nome, telefone, profissão, e-mail,
+  presente, entrada, origem e data da inscrição. Sem identificadores internos do banco.
+- **Exportar relatório (PDF)** — documento pronto para enviar ao cliente, com o resumo do
+  evento, o perfil do público por profissão e a lista completa de participantes.
+
+A base pertence à WL Atacadista; a planilha também pode ser gerada pelo painel do Supabase
 (**Table Editor → inscritos → Export**).
 
 ## Publicar (Vercel)
@@ -209,6 +232,28 @@ navegador desliga o service worker e a câmera: a página **não** reabre sem re
 de QR não funciona. A fila offline continua funcionando (inscrição e check-in em modo avião
 sobem quando a rede volta) desde que a página fique aberta. Para o teste completo, use o
 endereço da Vercel, que já é HTTPS.
+
+## Teste de carga
+
+Para simular o evento cheio antes do dia, com participantes fictícios:
+
+```bash
+export SUPABASE_ACCESS_TOKEN=sbp_...          # token pessoal do Supabase
+node tests/carga/gerar-dados.mjs 1500          # cria 1500 participantes fictícios
+node tests/carga/apagar-dados.mjs              # mostra quantos apagaria
+node tests/carga/apagar-dados.mjs --apagar     # apaga só os fictícios
+```
+
+Todos os registros fictícios têm e-mail terminado em `@carga.teste`. É por essa marca que
+o script de exclusão os encontra, então nenhum participante real corre risco de ser apagado.
+Antes de divulgar o QR code, rode a exclusão e confirme que a base voltou ao normal.
+
+Para medir o desempenho com a base cheia:
+
+```bash
+EMAIL=... SENHA=... BASE_URL=https://credenciamento-wl.vercel.app \
+  node tests/carga/medir-desempenho.mjs
+```
 
 ## Reaproveitar em outro evento
 

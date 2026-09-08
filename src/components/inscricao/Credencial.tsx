@@ -22,7 +22,7 @@ export function Credencial({ nome, profissao, codigo }: Props) {
       }}
     >
       <div className="flex justify-center bg-white/10 px-5 py-3.5">
-        <Logo variante="clara" altura={34} />
+        <Logo variante="clara" className="h-[34px] w-auto" />
       </div>
       <div className="px-5 pb-6 pt-4">
         <div className="mb-3 text-[11px] font-bold tracking-[1.5px] text-azul-claro">{faixaCredencial}</div>
