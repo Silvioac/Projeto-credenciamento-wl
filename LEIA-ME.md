@@ -3,12 +3,14 @@
 Sistema desenvolvido pela **DS TecnoFisio** para inscrição e check-in de participantes.
 Este guia explica como operar no dia do evento, como publicar e como reaproveitar para outros eventos.
 
+**No ar:** https://credenciamento-wl.vercel.app · **Código:** https://github.com/Silvioac/Projeto-credenciamento-wl
+
 ## Endereços
 
 | Página | Quem usa | Para quê |
 |---|---|---|
 | `/inscricao` | Público (link do QR de divulgação) | Cadastro → credencial digital com QR + comprovante |
-| `/gestao` | Equipe (login) | Aba **Recepção** (check-in, cadastro na porta) e aba **Painel** (métricas, exportar CSV) |
+| `/gestao` | Equipe (login) | Aba **Recepção** (check-in, cadastro na porta) e, no perfil administrativo, aba **Painel** (métricas e exportações) |
 | `/gestao/login` | Equipe | Entrar com e-mail e senha |
 
 ## Antes do evento
@@ -58,11 +60,17 @@ npm run test:rls
 Esse teste usa a chave pública e prova que o anônimo consegue **apenas** se inscrever:
 não lê, não conta, não altera, não apaga e não se cadastra como presente. Deve passar 8/8.
 
-### 4. Limpar os cadastros de teste
+### 4. Zerar a base antes de divulgar o QR code
 
-Antes de divulgar o QR code, apague os registros usados nos testes: Supabase → **Table
-Editor → inscritos** → selecione as linhas de teste → **Delete**. Assim os números do painel
-começam do zero no dia do evento.
+Se houve testes, apague tudo para o painel começar do zero no dia do evento. Pelo painel:
+Supabase → **Table Editor → inscritos** → selecione as linhas → **Delete**. Ou pelo terminal:
+
+```bash
+export SUPABASE_ACCESS_TOKEN=sbp_...
+node tests/carga/apagar-dados.mjs --tudo --sim-eu-quero
+```
+
+Apagar inscritos **não** apaga os usuários da equipe nem os perfis deles.
 
 ### 5. Testar o fluxo completo
 
@@ -277,12 +285,23 @@ npm run verificar    # typecheck + lint + teste de RLS
 npm run test:rls     # só o teste de segurança
 ```
 
+Testes de navegador (exigem `npx playwright install chromium` uma vez) estão documentados em
+`tests/navegador/LEIA-ME.md`: fluxo público, gestão, dois aparelhos, perfis e responsividade.
+
 ## Estrutura do banco
 
-`schema.sql` cria a tabela `inscritos`, as políticas de RLS, os índices, o Realtime e duas
-views (`painel_resumo`, `painel_profissoes`) úteis para consultas SQL no painel do Supabase.
-Execute-o uma única vez em **SQL Editor** num projeto novo; a seção de views pode ser
-reexecutada.
+`schema.sql` é o arquivo único que monta o banco. Ele cria:
+
+- a tabela `inscritos` com as políticas de RLS e os índices de busca;
+- a publicação de tempo real usada pelo painel;
+- as views `painel_resumo` e `painel_profissoes`, úteis para consultas no painel do Supabase;
+- a coluna `atualizado_em` com gatilho, que permite a cada aparelho baixar só o que mudou;
+- a função `manter_ativo()`, chamada pelo cron que evita a pausa do projeto;
+- a tabela `perfis` e o gatilho que limita o que o perfil recepção pode alterar;
+- os privilégios mínimos de cada papel.
+
+Execute-o em **SQL Editor** num projeto novo. Da seção de views em diante tudo pode ser
+reexecutado à vontade, sem perder dados.
 
 ## Problemas comuns
 
@@ -291,5 +310,7 @@ reexecutada.
 | "E-mail ou senha incorretos" | Confirme o usuário em Authentication → Users (Auto Confirm). |
 | Câmera não abre | Permita o acesso à câmera no navegador; o site precisa estar em HTTPS (a Vercel já é). Use a busca por nome enquanto isso. |
 | Indicador preso em "pendentes" | Toque nele para forçar o envio. Se persistir, confira a internet do aparelho; nada se perde. |
-| Painel diz "Tempo real indisponível" | Normal em redes restritas; ele atualiza a cada 20 s mesmo assim. |
-| Precisa apagar registros de teste | Supabase → Table Editor → inscritos → filtre por e-mail/nome e apague. |
+| Painel diz "Tempo real indisponível" | Normal em redes restritas; ele confere o servidor a cada 10 s mesmo assim. |
+| Precisa apagar registros de teste | Veja "Zerar a base antes de divulgar o QR code". |
+| Alguém da equipe não vê o Painel | O perfil dela é `recepcao`. Mude para `admin` em Table Editor → perfis, e peça para sair e entrar de novo. |
+| Relatório em PDF com muitas páginas | Normal: a lista sai em paisagem, uma linha por participante. O resumo está sempre na página 1. |
