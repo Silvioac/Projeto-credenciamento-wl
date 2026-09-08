@@ -119,6 +119,34 @@ impede o envio do `.env.local`.
 
 Cada `git push` na branch principal gera um novo deploy automaticamente.
 
+## Camadas de segurança
+
+O que protege os dados pessoais dos participantes, de fora para dentro:
+
+| Camada | O que faz |
+|---|---|
+| Cabeçalhos HTTP | CSP restringe para onde a página envia dados; `X-Frame-Options` impede embutir o site em iframe; `Permissions-Policy` libera a câmera só para a própria origem |
+| Rota `/gestao` | Protegida pelo `src/proxy.ts`; sem sessão válida, redireciona para o login. Servida com `no-store` e `noindex` |
+| Contas | Cadastro público de contas **desativado**: só um administrador cria usuários. Senha mínima de 12 caracteres, exigindo maiúscula, minúscula e número |
+| Privilégios do banco | O visitante anônimo tem **apenas INSERT** em `inscritos`. A equipe logada lê, insere e atualiza, mas **não apaga**. Excluir registros só pelo painel do Supabase |
+| RLS | Mesmo com privilégio, as políticas limitam o que cada papel enxerga. O anônimo não lê nenhuma linha, nem a própria |
+| Funções | `search_path` fixo, para não serem sequestradas por objetos de outro schema |
+
+Rodar `npm run test:rls` prova as três últimas linhas na prática: são dez testes que tentam
+ler, listar, contar, alterar, apagar e criar conta com a chave pública, e todos falham.
+
+**Limitações conhecidas, por decisão ou por plano:**
+
+- A proteção contra senhas vazadas do Supabase exige plano pago. Compense escolhendo senhas
+  longas e exclusivas deste sistema.
+- As sessões não expiram sozinhas. Se um tablet da recepção for perdido, remova o usuário em
+  Authentication → Users para cortar o acesso.
+- Qualquer pessoa logada pode exportar a base inteira em CSV. Trate a senha da equipe como
+  trata a própria lista de participantes.
+- O console do navegador pode acusar bloqueio do script `vercel.live/.../feedback.js`. É o
+  widget de feedback da própria Vercel, barrado pela CSP de propósito, e não afeta em nada
+  quem usa o sistema. Para silenciar, desligue a Vercel Toolbar em produção.
+
 ## Impedir a pausa do banco (plano gratuito)
 
 O plano gratuito do Supabase **pausa** projetos que passam 7 dias sem nenhuma requisição, e
