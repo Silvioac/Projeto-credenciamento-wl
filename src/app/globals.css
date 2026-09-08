@@ -46,26 +46,38 @@ body {
   outline-offset: 2px;
 }
 
-/* Impressão: somente o comprovante */
+/* Impressão: somente o comprovante.
+   Tudo que não é o comprovante carrega a classe .nao-imprimir e some com display:none
+   (o truque de visibility:hidden gera página em branco no Firefox e no Safari do iPhone). */
+@page {
+  margin: 12mm;
+}
 @media print {
-  body * {
-    visibility: hidden;
-  }
-  #comprovante,
-  #comprovante * {
-    visibility: visible;
-  }
-  #comprovante {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    border: none;
-    margin: 0;
-    box-shadow: none;
+  html,
+  body {
+    background: #fff !important;
+    min-height: 0 !important;
+    height: auto !important;
   }
   .nao-imprimir {
     display: none !important;
+  }
+  main {
+    display: block !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  #comprovante {
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 

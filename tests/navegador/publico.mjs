@@ -60,10 +60,11 @@ ok("linha no Supabase (online)", Array.isArray(linha) && linha.length === 1 && l
 
 // 4) Impressão: só o comprovante visível
 await page.emulateMedia({ media: "print" });
-const visCred = await page.locator("section[aria-label='Credencial digital']").evaluate((el) => getComputedStyle(el).visibility);
-const visComp = await page.locator("#comprovante").evaluate((el) => getComputedStyle(el).visibility);
-ok("impressão esconde credencial", visCred === "hidden", visCred);
-ok("impressão mostra comprovante", visComp === "visible", visComp);
+const visCred = await page.locator("section[aria-label='Credencial digital']").evaluate((el) => getComputedStyle(el).display);
+const visComp = await page.locator("#comprovante").evaluate((el) => getComputedStyle(el).display);
+const visHeader = await page.locator("header").evaluate((el) => getComputedStyle(el).display);
+ok("impressão esconde credencial e cabeçalho", visCred === "none" && visHeader === "none", `${visCred}/${visHeader}`);
+ok("impressão mostra comprovante", visComp !== "none", visComp);
 await page.screenshot({ path: `${DIR}/shot-03-print.png`, fullPage: true });
 await page.emulateMedia({ media: "screen" });
 
