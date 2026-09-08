@@ -58,7 +58,8 @@ npm run test:rls
 ```
 
 Esse teste usa a chave pública e prova que o anônimo consegue **apenas** se inscrever:
-não lê, não conta, não altera, não apaga e não se cadastra como presente. Deve passar 8/8.
+não lê, não conta, não altera, não apaga, não se cadastra como presente e não cria conta.
+Deve passar 10/10.
 
 ### 4. Zerar a base antes de divulgar o QR code
 
@@ -95,7 +96,7 @@ na Recepção → confirme a entrada (câmera ou botão) → o Painel atualiza e
 - O indicador no topo mostra **Offline** e o número de operações **pendentes**.
 - Busca, check-in e cadastro na porta continuam funcionando com a cópia local.
 - Tudo é reenviado sozinho quando a rede volta (evento `online`, tentativas com espera
-  crescente e intervalo de 30 s). Toque no indicador para forçar o envio.
+  crescente e uma nova tentativa a cada 15 s). Toque no indicador para forçar o envio.
 - Nada é duplicado: cada operação tem um identificador único e o servidor trata reenvios
   como sucesso.
 - Inscrições feitas pelo público sem rede também ficam guardadas no celular do participante
@@ -106,7 +107,8 @@ na Recepção → confirme a entrada (câmera ou botão) → o Painel atualiza e
 
 Aba **Painel**: presentes agora, inscritos no total, comparecimento, cadastros na porta,
 gráfico por profissão (barra clara = inscritos, escura = presentes) e as últimas entradas.
-Atualiza em tempo real; se o canal cair, atualiza a cada 20 s.
+Atualiza em tempo real e, de qualquer forma, confere o servidor a cada 10 s — então funciona
+mesmo em rede que bloqueie a conexão contínua.
 
 ### Ao final: exportar a base
 
