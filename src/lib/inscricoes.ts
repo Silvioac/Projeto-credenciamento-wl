@@ -51,6 +51,20 @@ export async function registrarCheckin(codigo: string, horaEntrada: string): Pro
   return { status: "ja_registrado", inscrito: comoInscrito(existente.data) };
 }
 
+/** Linhas criadas ou alteradas desde `desdeISO` (coluna `atualizado_em`, mantida por gatilho). */
+export async function buscarMudancasDesde(desdeISO: string): Promise<Inscrito[]> {
+  const sb = supabaseNavegador();
+  const { data, error } = await sb
+    .from("inscritos")
+    .select("*")
+    .gt("atualizado_em", desdeISO)
+    .order("atualizado_em", { ascending: true })
+    .limit(1000)
+    .abortSignal(sinalTimeout());
+  if (error) throw converterErro(error);
+  return (data ?? []).map(comoInscrito);
+}
+
 const TAMANHO_PAGINA = 1000;
 
 /** Baixa a base completa paginando (o PostgREST limita 1000 linhas por chamada). */

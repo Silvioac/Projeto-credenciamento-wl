@@ -58,7 +58,7 @@ export async function cadastrarNaPorta(
     criado_em: agora,
   };
   const op = novaOperacao({ tipo: "porta", dados: novo });
-  const inscrito: Inscrito = { id: op.id, ...novo };
+  const inscrito: Inscrito = { id: op.id, atualizado_em: agora, ...novo };
   base.aplicarLocal(inscrito);
   const envio = await enviarOuEnfileirar(op);
   return { inscrito, pendente: envio.envio === "pendente" };

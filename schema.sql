@@ -68,3 +68,25 @@ select
 from public.inscritos
 group by profissao
 order by total desc, profissao;
+
+-- =============================================================
+-- Sincronização incremental (recepção consulta só o que mudou).
+-- `atualizado_em` é mantido por gatilho a cada UPDATE.
+-- Pode ser reexecutado à vontade.
+-- =============================================================
+alter table public.inscritos
+  add column if not exists atualizado_em timestamptz not null default now();
+
+create or replace function public.marcar_atualizado_em()
+returns trigger language plpgsql as $$
+begin
+  new.atualizado_em := now();
+  return new;
+end $$;
+
+drop trigger if exists trg_inscritos_atualizado_em on public.inscritos;
+create trigger trg_inscritos_atualizado_em
+  before update on public.inscritos
+  for each row execute function public.marcar_atualizado_em();
+
+create index if not exists idx_inscritos_atualizado_em on public.inscritos (atualizado_em);

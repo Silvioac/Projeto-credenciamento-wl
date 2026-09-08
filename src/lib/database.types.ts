@@ -17,6 +17,7 @@ export type Database = {
     Tables: {
       inscritos: {
         Row: {
+          atualizado_em: string
           codigo: string
           criado_em: string
           email: string
@@ -29,6 +30,7 @@ export type Database = {
           telefone: string
         }
         Insert: {
+          atualizado_em?: string
           codigo: string
           criado_em?: string
           email: string
@@ -41,6 +43,7 @@ export type Database = {
           telefone: string
         }
         Update: {
+          atualizado_em?: string
           codigo?: string
           criado_em?: string
           email?: string

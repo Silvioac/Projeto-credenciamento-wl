@@ -114,6 +114,14 @@ Cada `git push` na branch principal gera um novo deploy automaticamente.
 
 Para testar a versão de produção localmente: `npm run build && npm run start`.
 
+### Testando pelo celular na rede local (sem HTTPS)
+
+Com `npm run dev`, o celular acessa `http://IP-do-computador:3000`. Como não é HTTPS, o
+navegador desliga o service worker e a câmera: a página **não** reabre sem rede e o leitor
+de QR não funciona. A fila offline continua funcionando (inscrição e check-in em modo avião
+sobem quando a rede volta) desde que a página fique aberta. Para o teste completo, use o
+endereço da Vercel, que já é HTTPS.
+
 ## Reaproveitar em outro evento
 
 Nada do restante do código conhece a WL. Basta trocar:

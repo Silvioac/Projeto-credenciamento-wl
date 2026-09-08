@@ -102,7 +102,9 @@ export function Painel({ base }: { base: BaseInscritos }) {
       </div>
 
       <p className="mt-4 text-center text-[11.5px] text-tinta-2">
-        {base.realtimeAtivo ? "Atualização em tempo real ativa." : "Tempo real indisponível: atualizando a cada 20 s."}
+        {base.realtimeAtivo
+          ? "Tempo real ativo, com conferência a cada 10 s."
+          : "Tempo real indisponível: conferindo o servidor a cada 10 s."}
         {base.atualizadoEm ? ` Última leitura do servidor às ${formatarHora(new Date(base.atualizadoEm).toISOString())}.` : ""}
       </p>
     </div>

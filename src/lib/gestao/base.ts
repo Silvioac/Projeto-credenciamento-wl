@@ -10,7 +10,7 @@ import {
   substituirCacheInscritos,
   type Operacao,
 } from "@/lib/db/local";
-import { buscarTodosInscritos } from "@/lib/inscricoes";
+import { buscarMudancasDesde, buscarTodosInscritos } from "@/lib/inscricoes";
 import { assinarFila } from "@/lib/fila/fila";
 import { mensagemDeErro } from "@/lib/rede";
 import { supabaseNavegador } from "@/lib/supabase/client";
@@ -32,8 +32,12 @@ export interface BaseInscritos {
   porCodigo: (codigo: string) => Inscrito | undefined;
 }
 
-const INTERVALO_COM_REALTIME_MS = 60_000;
-const INTERVALO_SEM_REALTIME_MS = 20_000;
+/** Consulta incremental (só o que mudou) — barata, roda sempre, com ou sem Realtime. */
+const INTERVALO_INCREMENTAL_MS = 10_000;
+/** Recarga completa de segurança (cobre relógio errado em algum aparelho, exclusões etc.). */
+const INTERVALO_COMPLETO_MS = 5 * 60_000;
+/** Margem para não perder linhas gravadas no mesmo instante da última consulta. */
+const MARGEM_MS = 5_000;
 
 /**
  * Sobrepõe as operações ainda não enviadas à lista vinda do servidor,
@@ -49,14 +53,18 @@ export function aplicarPendentes(lista: Inscrito[], ops: Operacao[]): Inscrito[]
         mapa.set(op.codigo, { ...atual, presente: true, hora_entrada: op.horaEntrada });
       }
     } else if (!mapa.has(op.dados.codigo)) {
-      mapa.set(op.dados.codigo, {
-        id: op.id,
-        criado_em: op.dados.criado_em ?? new Date(op.criadaEm).toISOString(),
-        ...op.dados,
-      });
+      const criado = op.dados.criado_em ?? new Date(op.criadaEm).toISOString();
+      mapa.set(op.dados.codigo, { id: op.id, criado_em: criado, atualizado_em: criado, ...op.dados });
     }
   }
   return [...mapa.values()];
+}
+
+/** Maior `atualizado_em` de uma lista (marca d'água da sincronização incremental). */
+function marcaDagua(lista: Inscrito[]): string | null {
+  let maior: string | null = null;
+  for (const i of lista) if (!maior || i.atualizado_em > maior) maior = i.atualizado_em;
+  return maior;
 }
 
 export function useBaseInscritos(): BaseInscritos {
@@ -67,7 +75,27 @@ export function useBaseInscritos(): BaseInscritos {
   const [erro, setErro] = useState<string | null>(null);
   const [realtimeAtivo, setRealtimeAtivo] = useState(false);
   const emAndamento = useRef(false);
+  const marca = useRef<string | null>(null);
+  const ultimaCompleta = useRef(0);
 
+  const mesclar = useCallback((linhas: Inscrito[]) => {
+    if (linhas.length === 0) return;
+    setMapa((m) => {
+      const novo = new Map(m);
+      for (const l of linhas) {
+        const atual = novo.get(l.codigo);
+        // Nunca regride um check-in já visto localmente (pode estar na fila de envio).
+        if (atual?.presente && !l.presente) continue;
+        novo.set(l.codigo, l);
+      }
+      return novo;
+    });
+    for (const l of linhas) void gravarInscritoCache(l).catch(() => {});
+    const m = marcaDagua(linhas);
+    if (m && (!marca.current || m > marca.current)) marca.current = m;
+  }, []);
+
+  /** Recarga completa do servidor + sobreposição das operações pendentes. */
   const atualizar = useCallback(async () => {
     if (emAndamento.current) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
@@ -77,6 +105,8 @@ export function useBaseInscritos(): BaseInscritos {
       const [servidor, ops] = await Promise.all([buscarTodosInscritos(), listarOperacoes().catch(() => [])]);
       const lista = aplicarPendentes(servidor, ops);
       setMapa(new Map(lista.map((i) => [i.codigo, i])));
+      marca.current = marcaDagua(servidor);
+      ultimaCompleta.current = Date.now();
       setAtualizadoEm(Date.now());
       setErro(null);
       await substituirCacheInscritos(lista).catch(() => {});
@@ -88,6 +118,28 @@ export function useBaseInscritos(): BaseInscritos {
     }
   }, []);
 
+  /** Só o que mudou desde a última marca (ou completa, se ainda não há marca / passou o prazo). */
+  const atualizarIncremental = useCallback(async () => {
+    if (emAndamento.current) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
+    if (!marca.current || Date.now() - ultimaCompleta.current > INTERVALO_COMPLETO_MS) {
+      await atualizar();
+      return;
+    }
+    emAndamento.current = true;
+    try {
+      const desde = new Date(new Date(marca.current).getTime() - MARGEM_MS).toISOString();
+      const mudancas = await buscarMudancasDesde(desde);
+      mesclar(mudancas);
+      setAtualizadoEm(Date.now());
+      setErro(null);
+    } catch (e) {
+      setErro(mensagemDeErro(e));
+    } finally {
+      emAndamento.current = false;
+    }
+  }, [atualizar, mesclar]);
+
   const aplicarLocal = useCallback((inscrito: Inscrito) => {
     setMapa((m) => {
       const novo = new Map(m);
@@ -97,9 +149,12 @@ export function useBaseInscritos(): BaseInscritos {
     void gravarInscritoCache(inscrito).catch(() => {});
   }, []);
 
-  // 1) cache local imediato, 2) servidor, 3) realtime, 4) polling de segurança
+  // 1) cache local imediato → 2) servidor → 3) realtime (após sessão pronta)
   useEffect(() => {
     let ativo = true;
+    const sb = supabaseNavegador();
+    let canal: RealtimeChannel | null = null;
+
     void (async () => {
       try {
         const [lista, quando] = await Promise.all([lerCacheInscritos(), lerMeta<number>("cacheAtualizadoEm")]);
@@ -112,74 +167,72 @@ export function useBaseInscritos(): BaseInscritos {
         if (ativo) setCarregando(false);
       }
       void atualizar();
+
+      // O canal precisa entrar já autenticado: antes da sessão o Supabase aplica a RLS como
+      // anônimo e não entrega nenhuma mudança.
+      const { data } = await sb.auth.getSession();
+      if (!ativo || !data.session) return;
+      try {
+        await sb.realtime.setAuth(data.session.access_token);
+        canal = sb
+          .channel("inscritos-ao-vivo")
+          .on<LinhaInscrito>(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "inscritos" },
+            (payload) => {
+              if (payload.eventType === "DELETE") {
+                const antigo = payload.old as Partial<LinhaInscrito>;
+                if (antigo.codigo) {
+                  setMapa((m) => {
+                    const novo = new Map(m);
+                    novo.delete(antigo.codigo as string);
+                    return novo;
+                  });
+                }
+                return;
+              }
+              mesclar([comoInscrito(payload.new)]);
+            },
+          )
+          .subscribe((status) => {
+            if (!ativo) return;
+            setRealtimeAtivo(status === "SUBSCRIBED");
+          });
+      } catch {
+        canal = null;
+      }
     })();
 
-    const sb = supabaseNavegador();
-    let canal: RealtimeChannel | null = null;
-    try {
-      canal = sb
-        .channel("inscritos-ao-vivo")
-        .on<LinhaInscrito>(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "inscritos" },
-          (payload) => {
-            if (payload.eventType === "DELETE") {
-              const antigo = payload.old as Partial<LinhaInscrito>;
-              if (antigo.codigo) {
-                setMapa((m) => {
-                  const novo = new Map(m);
-                  novo.delete(antigo.codigo as string);
-                  return novo;
-                });
-              }
-              return;
-            }
-            const linha = comoInscrito(payload.new);
-            setMapa((m) => {
-              const novo = new Map(m);
-              novo.set(linha.codigo, linha);
-              return novo;
-            });
-            void gravarInscritoCache(linha).catch(() => {});
-          },
-        )
-        .subscribe((status) => {
-          if (!ativo) return;
-          setRealtimeAtivo(status === "SUBSCRIBED");
-        });
-    } catch {
-      // Realtime indisponível: o polling abaixo cobre.
-      canal = null;
-    }
-
     const aoVoltarOnline = () => void atualizar();
+    const aoFicarVisivel = () => {
+      if (document.visibilityState === "visible") void atualizarIncremental();
+    };
     window.addEventListener("online", aoVoltarOnline);
+    window.addEventListener("focus", aoFicarVisivel);
+    document.addEventListener("visibilitychange", aoFicarVisivel);
 
     // quando a fila termina de enviar, busca a verdade do servidor
     let pendentesAntes = 0;
     const cancelarFila = assinarFila((e) => {
-      if (pendentesAntes > 0 && e.pendentes === 0 && !e.sincronizando) void atualizar();
+      if (pendentesAntes > 0 && e.pendentes === 0 && !e.sincronizando) void atualizarIncremental();
       pendentesAntes = e.pendentes;
     });
 
     return () => {
       ativo = false;
       window.removeEventListener("online", aoVoltarOnline);
+      window.removeEventListener("focus", aoFicarVisivel);
+      document.removeEventListener("visibilitychange", aoFicarVisivel);
       cancelarFila();
       if (canal) void sb.removeChannel(canal);
     };
-  }, [atualizar]);
+  }, [atualizar, atualizarIncremental, mesclar]);
 
-  // Polling de segurança: mais frequente quando o canal em tempo real cai.
+  // 4) polling incremental sempre ligado (com Realtime é redundância; sem ele é o caminho principal)
   useEffect(() => {
-    const intervalo = setInterval(
-      () => {
-        if (navigator.onLine) void atualizar();
-      },
-      realtimeAtivo ? INTERVALO_COM_REALTIME_MS : INTERVALO_SEM_REALTIME_MS,
-    );
+    const intervalo = setInterval(() => void atualizarIncremental(), INTERVALO_INCREMENTAL_MS);
     return () => clearInterval(intervalo);
-  }, [realtimeAtivo, atualizar]);
+  }, [atualizarIncremental]);
 
   const inscritos = useMemo(() => [...mapa.values()], [mapa]);
   const porCodigo = useCallback((codigo: string) => mapa.get(codigo), [mapa]);

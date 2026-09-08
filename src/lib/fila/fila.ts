@@ -9,6 +9,7 @@ import {
 } from "@/lib/db/local";
 import { inserirInscrito, registrarCheckin, type ResultadoCheckin } from "@/lib/inscricoes";
 import { ehErroDeRede, ErroRede, ErroServidor, mensagemDeErro } from "@/lib/rede";
+import { gerarUuid } from "@/lib/uuid";
 
 /* ---------- estado observável ---------- */
 
@@ -65,7 +66,7 @@ export type NovaOperacao = SemBase<Operacao>;
 export function novaOperacao(base: NovaOperacao): Operacao {
   return {
     ...base,
-    id: crypto.randomUUID(),
+    id: gerarUuid(),
     criadaEm: Date.now(),
     tentativas: 0,
     proximaTentativa: 0,
@@ -209,7 +210,7 @@ export function sincronizarFila(): Promise<void> {
 
 /* ---------- gatilhos automáticos ---------- */
 
-const INTERVALO_MS = 30_000;
+const INTERVALO_MS = 15_000;
 let iniciado = false;
 
 /** Liga os gatilhos de sincronização (chamar uma vez, no cliente). */
@@ -226,6 +227,9 @@ export function iniciarSincronizacaoAutomatica(): () => void {
   };
 
   window.addEventListener("online", aoVoltarOnline);
+  // Celular: ao voltar das configurações (modo avião) o navegador dispara focus/pageshow/visibilidade.
+  window.addEventListener("focus", aoVoltarOnline);
+  window.addEventListener("pageshow", aoVoltarOnline);
   document.addEventListener("visibilitychange", aoFicarVisivel);
   navigator.serviceWorker?.addEventListener("message", aoMensagemSW);
   const intervalo = setInterval(() => void sincronizarFila(), INTERVALO_MS);
@@ -236,6 +240,8 @@ export function iniciarSincronizacaoAutomatica(): () => void {
   return () => {
     iniciado = false;
     window.removeEventListener("online", aoVoltarOnline);
+    window.removeEventListener("focus", aoVoltarOnline);
+    window.removeEventListener("pageshow", aoVoltarOnline);
     document.removeEventListener("visibilitychange", aoFicarVisivel);
     navigator.serviceWorker?.removeEventListener("message", aoMensagemSW);
     clearInterval(intervalo);
