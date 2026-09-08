@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credenciamento WL Atacadista — Protótipo DS TecnoFisio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    /* Paleta oficial extraída da logo WL */
+    --wl-azul:#3C8BD6;
+    --wl-azul-escuro:#1E5B94;
+    --wl-azul-noite:#153F68;
+    --wl-grafite:#232323;
+    --wl-claro:#F2F2F2;
+    --fundo:#F3F6FA;
+    --superficie:#FFFFFF;
+    --tinta:#232323;
+    --tinta-2:#5A6675;
+    --linha:#DCE4EE;
+    --ok:#1E9E5A;
+    --erro:#C93A3A;
+    --raio:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Archivo","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    background:var(--fundo);color:var(--tinta);min-height:100vh;
+  }
+  button{font-family:inherit;cursor:pointer;border:none}
+  input,select{font-family:inherit}
+
+  /* ---------- barra superior ---------- */
+  .topo{background:var(--superficie);border-bottom:1px solid var(--linha);padding:12px 18px}
+  .topo-linha{display:flex;align-items:center;gap:12px;max-width:1040px;margin:0 auto}
+  .logo-wl svg{height:44px;width:auto;display:block}
+  .topo-titulo{font-size:11.5px;color:var(--tinta-2);line-height:1.35;border-left:1px solid var(--linha);padding-left:12px}
+  .topo-titulo b{color:var(--wl-azul-escuro);font-size:12.5px;display:block}
+  .selo-demo{
+    margin-left:auto;font-size:10.5px;color:#fff;
+    background:var(--wl-azul);border-radius:20px;padding:4px 10px;font-weight:700;flex-shrink:0;
+  }
+  .barra-abas{background:var(--wl-azul-escuro)}
+  .abas{display:flex;gap:2px;max-width:1040px;margin:0 auto;padding:0 18px}
+  .aba{
+    background:transparent;color:#BCD4EA;font-size:13.5px;font-weight:600;
+    padding:12px 18px;border-bottom:3px solid transparent;
+  }
+  .aba.ativa{color:#fff;border-bottom-color:#fff}
+  @media (max-width:560px){
+    .logo-wl svg{height:34px}
+    .topo-titulo{display:none}
+    .aba{padding:12px 8px;font-size:12.5px;flex:1;text-align:center}
+  }
+
+  .conteudo{max-width:1040px;margin:0 auto;padding:22px 18px 60px}
+  .tela{display:none}
+  .tela.ativa{display:block}
+
+  .cartao{
+    background:var(--superficie);border:1px solid var(--linha);
+    border-radius:var(--raio);padding:22px;
+  }
+  h1{font-size:22px;color:var(--wl-azul-escuro);margin-bottom:4px}
+  .sub{color:var(--tinta-2);font-size:13.5px;margin-bottom:18px}
+
+  /* ---------- formulário ---------- */
+  .campo{margin-bottom:14px}
+  .campo label{display:block;font-size:13px;font-weight:600;margin-bottom:5px}
+  .campo input,.campo select{
+    width:100%;padding:12px 13px;font-size:15px;
+    border:1.5px solid var(--linha);border-radius:10px;background:#fff;color:var(--tinta);
+  }
+  .campo input:focus,.campo select:focus{outline:2px solid var(--wl-azul);border-color:var(--wl-azul)}
+  .campo .dica-erro{color:var(--erro);font-size:12px;margin-top:4px;display:none}
+  .campo.invalido input,.campo.invalido select{border-color:var(--erro)}
+  .campo.invalido .dica-erro{display:block}
+
+  .botao{
+    width:100%;padding:14px;font-size:15.5px;font-weight:700;border-radius:10px;
+    background:var(--wl-azul-escuro);color:#fff;
+  }
+  .botao:hover{background:var(--wl-azul-noite)}
+  .botao-claro{background:var(--wl-azul);color:#fff}
+  .botao-claro:hover{background:var(--wl-azul-escuro)}
+  .botao-linha{background:transparent;border:1.5px solid var(--linha);color:var(--tinta-2)}
+  .botao-linha:hover{border-color:var(--wl-azul);color:var(--wl-azul-escuro)}
+
+  .grade-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:680px){.grade-2{grid-template-columns:1fr}}
+  .coluna-central{max-width:520px;margin:0 auto}
+
+  /* ---------- credencial ---------- */
+  .credencial{
+    max-width:360px;margin:0 auto;color:#fff;
+    background:linear-gradient(160deg,var(--wl-azul-escuro),var(--wl-azul-noite));
+    border-radius:18px;overflow:hidden;text-align:center;
+  }
+  .cred-topo{background:rgba(255,255,255,.08);padding:14px 20px;display:flex;justify-content:center}
+  .cred-topo svg{height:34px;width:auto}
+  .cred-corpo{padding:18px 20px 24px}
+  .cred-evento{font-size:11px;letter-spacing:1.5px;color:#9CC4E8;font-weight:700;margin-bottom:12px}
+  .cred-qr{background:#fff;border-radius:12px;width:180px;height:180px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center}
+  .cred-qr img{width:160px;height:160px}
+  .cred-nome{font-size:19px;font-weight:700;margin-bottom:2px}
+  .cred-prof{font-size:13px;color:#BCD4EA;margin-bottom:10px}
+  .cred-codigo{
+    display:inline-block;background:rgba(255,255,255,.12);border-radius:8px;
+    padding:6px 14px;font-size:15px;font-weight:700;letter-spacing:2px;color:#fff;
+  }
+  .cred-rodape{font-size:11px;color:#8FB3D6;padding:0 20px 18px}
+
+  /* ---------- comprovante ---------- */
+  .comprovante{
+    background:#fff;border:1px solid var(--linha);border-radius:var(--raio);
+    padding:22px;margin-top:14px;
+  }
+  .comp-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:2px solid var(--wl-azul);padding-bottom:12px;margin-bottom:14px}
+  .comp-cab svg{height:30px;width:auto}
+  .comp-titulo{font-size:13px;font-weight:800;color:var(--wl-azul-escuro);text-align:right;line-height:1.3}
+  .comp-titulo span{display:block;font-size:10.5px;color:var(--tinta-2);font-weight:600}
+  .comp-linha{display:flex;justify-content:space-between;gap:14px;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--linha)}
+  .comp-linha:last-of-type{border-bottom:none}
+  .comp-rotulo{color:var(--tinta-2);flex-shrink:0}
+  .comp-valor{font-weight:600;text-align:right;word-break:break-word}
+  .comp-codigo{color:var(--wl-azul-escuro);font-weight:800;letter-spacing:1px}
+  .comp-nota{font-size:11.5px;color:var(--tinta-2);margin-top:12px;padding-top:10px;border-top:1px solid var(--linha)}
+  .comp-acoes{margin-top:14px}
+
+  /* impressão: só o comprovante */
+  @media print{
+    body *{visibility:hidden}
+    #comprovante,#comprovante *{visibility:visible}
+    #comprovante{position:absolute;top:0;left:0;width:100%;border:none;margin:0}
+    .comp-acoes{display:none}
+  }
+
+  /* ---------- recepção ---------- */
+  .busca{display:flex;gap:10px;margin-bottom:16px}
+  .busca input{flex:1;padding:13px;font-size:15px;border:1.5px solid var(--linha);border-radius:10px}
+  .busca input:focus{outline:2px solid var(--wl-azul)}
+  .lista-item{
+    display:flex;align-items:center;gap:12px;padding:13px 14px;
+    border:1px solid var(--linha);border-radius:12px;margin-bottom:9px;background:#fff;
+  }
+  .avatar{
+    width:40px;height:40px;border-radius:50%;background:#E4EEF8;
+    color:var(--wl-azul-escuro);font-weight:700;font-size:14px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .li-info{flex:1;min-width:0}
+  .li-nome{font-weight:600;font-size:14.5px}
+  .li-det{font-size:12px;color:var(--tinta-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tag{font-size:11px;font-weight:700;border-radius:20px;padding:4px 10px;flex-shrink:0}
+  .tag-presente{background:#E2F5EA;color:var(--ok)}
+  .btn-checkin{
+    flex-shrink:0;background:var(--wl-azul-escuro);color:#fff;font-weight:700;
+    font-size:12.5px;padding:9px 13px;border-radius:9px;
+  }
+  .btn-checkin:hover{background:var(--wl-azul-noite)}
+  .vazio{color:var(--tinta-2);font-size:14px;text-align:center;padding:26px 10px}
+
+  /* ---------- dashboard ---------- */
+  .metricas{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  @media (max-width:760px){.metricas{grid-template-columns:repeat(2,1fr)}}
+  .metrica{background:#fff;border:1px solid var(--linha);border-radius:var(--raio);padding:16px}
+  .metrica .num{font-size:30px;font-weight:800;color:var(--wl-azul-escuro);line-height:1.1}
+  .metrica .rot{font-size:12px;color:var(--tinta-2);margin-top:3px}
+  .metrica.destaque{background:var(--wl-azul-escuro);border-color:var(--wl-azul-escuro)}
+  .metrica.destaque .num{color:#fff}
+  .metrica.destaque .rot{color:#BCD4EA}
+
+  .duas-col{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+  @media (max-width:820px){.duas-col{grid-template-columns:1fr}}
+  .titulo-bloco{font-size:14px;font-weight:700;color:var(--wl-azul-escuro);margin-bottom:14px}
+
+  .barra-linha{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .barra-rotulo{width:150px;font-size:12.5px;color:var(--tinta-2);text-align:right;flex-shrink:0}
+  .barra-trilho{flex:1;background:var(--fundo);border-radius:6px;height:22px;overflow:hidden}
+  .barra-valor{height:100%;background:var(--wl-azul);border-radius:6px;min-width:4px;transition:width .5s ease}
+  .barra-num{width:30px;font-size:12.5px;font-weight:700;color:var(--wl-azul-escuro)}
+  @media (max-width:560px){.barra-rotulo{width:110px}}
+
+  .feed-item{
+    display:flex;gap:10px;align-items:baseline;font-size:13px;
+    padding:9px 0;border-bottom:1px solid var(--fundo);
+  }
+  .feed-hora{color:var(--tinta-2);font-size:11.5px;flex-shrink:0;width:44px}
+  .feed-item strong{font-weight:600}
+
+  .aviso-demo{margin-top:20px;font-size:12px;color:var(--tinta-2);text-align:center}
+  .rodape-ds{
+    text-align:center;font-size:11.5px;color:var(--tinta-2);
+    padding:18px;border-top:1px solid var(--linha);margin-top:10px;
+  }
+  .rodape-ds b{color:#2B534A}
+
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);
+    background:var(--wl-grafite);color:#fff;font-size:14px;padding:12px 20px;
+    border-radius:10px;opacity:0;transition:all .3s ease;z-index:50;max-width:90vw;text-align:center;
+  }
+  #toast.ok{background:var(--ok)}
+  #toast.mostrar{transform:translateX(-50%) translateY(0);opacity:1}
+
+  .btn-simular{margin-top:14px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="topo-linha">
+    <div class="logo-wl"><svg xmlns="http://www.w3.org/2000/svg" width="488" height="118" viewBox="0 0 488 118" fill="none"><path d="M176 98.0377L88 117.646L0 98.0377V19.6082L88 0L176 19.6082V98.0377Z" fill="#3C8BD6"></path><path d="M95.8237 39.2166L78.2237 68.6272V39.2166H60.6237L43.0237 68.6272V39.2166H31.2915V78.433H48.6337C50.0087 78.433 51.2806 77.7092 51.9887 76.5304L66.4949 52.2899V78.433H83.8371C85.2121 78.433 86.484 77.7092 87.1921 76.5304L109.519 39.22H95.8306L95.8237 39.2166Z" fill="#F2F2F2"></path><path d="M142.756 68.6272H113.259L130.859 39.2166H117.171L93.7028 78.433H107.391H148.624L142.756 68.6272Z" fill="#F2F2F2"></path><path d="M228.141 68.5502H216.801L214.42 75.3321H207L218.761 43.5146H226.181L237.942 75.3321H230.522L228.141 68.5502ZM218.996 62.1395H225.996L222.496 52.2197L218.996 62.1395Z" fill="#232323"></path><path d="M246.767 49.9254H239.069V43.5146H261.093V49.9254H253.396V75.3321H246.767V49.9254Z" fill="#232323"></path><path d="M283.303 68.5502H271.963L269.582 75.3321H262.162L273.923 43.5146H281.343L293.104 75.3321H285.684L283.303 68.5502ZM274.158 62.1395H281.158L277.658 52.2197L274.158 62.1395Z" fill="#232323"></path><path d="M319.519 74.2101C317.374 75.2392 314.901 75.8465 312.285 75.8465C302.997 75.8465 295.947 68.7357 295.947 59.4233C295.947 50.1108 302.997 43 312.285 43C314.901 43 317.374 43.6073 319.519 44.6364V52.2618C317.744 50.7182 315.229 49.6385 312.285 49.6385C306.875 49.6385 302.761 54.0332 302.761 59.4148C302.761 64.7965 306.825 69.1912 312.285 69.1912C315.221 69.1912 317.837 68.1115 319.519 66.6185V74.2017V74.2101Z" fill="#232323"></path><path d="M344.858 68.5502H333.518L331.137 75.3321H323.717L335.478 43.5146H342.898L354.659 75.3321H347.239L344.858 68.5502ZM335.714 62.1395H342.713L339.214 52.2197L335.714 62.1395Z" fill="#232323"></path><path d="M360.355 43.5146H372.116C381.773 43.5146 387.797 50.111 387.797 59.4234C387.797 68.7358 381.773 75.3321 372.116 75.3321H360.355V43.5146ZM366.984 49.9254V68.9214H372.073C377.811 68.9214 380.94 64.8472 380.94 59.4234C380.94 53.9996 377.811 49.9254 372.073 49.9254H366.984Z" fill="#232323"></path><path d="M395.267 43.5146H401.896V75.3321H395.267V43.5146Z" fill="#232323"></path><path d="M427.513 51.5194C425.881 50.3469 423.079 49.225 420.657 49.225C417.998 49.225 416.736 50.4397 416.736 52.0761C416.736 53.1052 417.578 54.0921 419.117 54.9778L423.315 57.5083C427.42 59.9883 429.052 62.7466 429.052 66.3062C429.052 71.3167 425.738 75.8548 418.368 75.8548C415.239 75.8548 412.345 75.0619 410.343 74.2184V66.8714C412.067 68.2294 415.146 69.6297 418.091 69.6297C420.615 69.6297 422.011 68.415 422.011 66.6774C422.011 65.5977 421.262 64.6192 419.487 63.5901L415.146 61.0174C410.948 58.5881 409.636 55.8719 409.636 52.2701C409.636 47.8248 412.479 43.0083 420.699 43.0083C423.079 43.0083 425.553 43.5735 427.513 44.4592V51.5278V51.5194Z" fill="#232323"></path><path d="M441.655 49.9254H433.957V43.5146H455.981V49.9254H448.284V75.3321H441.655V49.9254Z" fill="#232323"></path><path d="M478.199 68.5502H466.859L464.478 75.3321H457.058L468.819 43.5146H476.239L488 75.3321H480.58L478.199 68.5502ZM469.055 62.1395H476.054L472.554 52.2197L469.055 62.1395Z" fill="#232323"></path></svg></div>
+    <div class="topo-titulo"><b>Credenciamento de Evento</b>Outubro de 2026 · Brasília/DF</div>
+    <div class="selo-demo">PROTÓTIPO</div>
+  </div>
+</header>
+<nav class="barra-abas">
+  <div class="abas">
+    <button class="aba ativa" data-tela="participante" onclick="trocarTela('participante')">Participante</button>
+    <button class="aba" data-tela="recepcao" onclick="trocarTela('recepcao')">Recepção</button>
+    <button class="aba" data-tela="painel" onclick="trocarTela('painel')">Organização</button>
+  </div>
+</nav>
+
+<main class="conteudo">
+
+  <!-- ============ TELA PARTICIPANTE ============ -->
+  <section class="tela ativa" id="tela-participante">
+    <div class="coluna-central">
+      <div class="cartao" id="bloco-form">
+        <h1>Garanta seu acesso ao evento</h1>
+        <p class="sub">Preencha seus dados e receba sua credencial digital com QR code e o comprovante de inscrição. Leva menos de um minuto.</p>
+
+        <div class="campo" id="c-nome">
+          <label for="f-nome">Nome completo</label>
+          <input id="f-nome" type="text" autocomplete="name" placeholder="Seu nome">
+          <div class="dica-erro">Informe seu nome completo.</div>
+        </div>
+        <div class="campo" id="c-tel">
+          <label for="f-tel">Telefone / WhatsApp</label>
+          <input id="f-tel" type="tel" inputmode="numeric" placeholder="(61) 99999-9999" maxlength="15">
+          <div class="dica-erro">Informe um telefone válido com DDD.</div>
+        </div>
+        <div class="campo" id="c-prof">
+          <label for="f-prof">Profissão</label>
+          <select id="f-prof">
+            <option value="">Selecione…</option>
+            <option>Eletricista</option>
+            <option>Engenheiro(a) Eletricista</option>
+            <option>Engenheiro(a) Civil</option>
+            <option>Construtor(a) / Empreiteiro(a)</option>
+            <option>Arquiteto(a)</option>
+            <option>Lojista / Revendedor(a)</option>
+            <option>Comprador(a) corporativo</option>
+            <option>Outra</option>
+          </select>
+          <div class="dica-erro">Selecione sua profissão.</div>
+        </div>
+        <div class="campo" id="c-email">
+          <label for="f-email">E-mail</label>
+          <input id="f-email" type="email" autocomplete="email" placeholder="voce@email.com">
+          <div class="dica-erro">Informe um e-mail válido.</div>
+        </div>
+
+        <button class="botao" onclick="inscrever()">Confirmar inscrição</button>
+      </div>
+
+      <div id="bloco-credencial" style="display:none">
+        <div class="credencial">
+          <div class="cred-topo"><svg xmlns="http://www.w3.org/2000/svg" width="488" height="118" viewBox="0 0 488 118" fill="none"><path d="M176 98.0377L88 117.646L0 98.0377V19.6082L88 0L176 19.6082V98.0377Z" fill="#3C8BD6"></path><path d="M95.8237 39.2166L78.2237 68.6272V39.2166H60.6237L43.0237 68.6272V39.2166H31.2915V78.433H48.6337C50.0087 78.433 51.2806 77.7092 51.9887 76.5304L66.4949 52.2899V78.433H83.8371C85.2121 78.433 86.484 77.7092 87.1921 76.5304L109.519 39.22H95.8306L95.8237 39.2166Z" fill="#F2F2F2"></path><path d="M142.756 68.6272H113.259L130.859 39.2166H117.171L93.7028 78.433H107.391H148.624L142.756 68.6272Z" fill="#F2F2F2"></path><path d="M228.141 68.5502H216.801L214.42 75.3321H207L218.761 43.5146H226.181L237.942 75.3321H230.522L228.141 68.5502ZM218.996 62.1395H225.996L222.496 52.2197L218.996 62.1395Z" fill="#FFFFFF"></path><path d="M246.767 49.9254H239.069V43.5146H261.093V49.9254H253.396V75.3321H246.767V49.9254Z" fill="#FFFFFF"></path><path d="M283.303 68.5502H271.963L269.582 75.3321H262.162L273.923 43.5146H281.343L293.104 75.3321H285.684L283.303 68.5502ZM274.158 62.1395H281.158L277.658 52.2197L274.158 62.1395Z" fill="#FFFFFF"></path><path d="M319.519 74.2101C317.374 75.2392 314.901 75.8465 312.285 75.8465C302.997 75.8465 295.947 68.7357 295.947 59.4233C295.947 50.1108 302.997 43 312.285 43C314.901 43 317.374 43.6073 319.519 44.6364V52.2618C317.744 50.7182 315.229 49.6385 312.285 49.6385C306.875 49.6385 302.761 54.0332 302.761 59.4148C302.761 64.7965 306.825 69.1912 312.285 69.1912C315.221 69.1912 317.837 68.1115 319.519 66.6185V74.2017V74.2101Z" fill="#FFFFFF"></path><path d="M344.858 68.5502H333.518L331.137 75.3321H323.717L335.478 43.5146H342.898L354.659 75.3321H347.239L344.858 68.5502ZM335.714 62.1395H342.713L339.214 52.2197L335.714 62.1395Z" fill="#FFFFFF"></path><path d="M360.355 43.5146H372.116C381.773 43.5146 387.797 50.111 387.797 59.4234C387.797 68.7358 381.773 75.3321 372.116 75.3321H360.355V43.5146ZM366.984 49.9254V68.9214H372.073C377.811 68.9214 380.94 64.8472 380.94 59.4234C380.94 53.9996 377.811 49.9254 372.073 49.9254H366.984Z" fill="#FFFFFF"></path><path d="M395.267 43.5146H401.896V75.3321H395.267V43.5146Z" fill="#FFFFFF"></path><path d="M427.513 51.5194C425.881 50.3469 423.079 49.225 420.657 49.225C417.998 49.225 416.736 50.4397 416.736 52.0761C416.736 53.1052 417.578 54.0921 419.117 54.9778L423.315 57.5083C427.42 59.9883 429.052 62.7466 429.052 66.3062C429.052 71.3167 425.738 75.8548 418.368 75.8548C415.239 75.8548 412.345 75.0619 410.343 74.2184V66.8714C412.067 68.2294 415.146 69.6297 418.091 69.6297C420.615 69.6297 422.011 68.415 422.011 66.6774C422.011 65.5977 421.262 64.6192 419.487 63.5901L415.146 61.0174C410.948 58.5881 409.636 55.8719 409.636 52.2701C409.636 47.8248 412.479 43.0083 420.699 43.0083C423.079 43.0083 425.553 43.5735 427.513 44.4592V51.5278V51.5194Z" fill="#FFFFFF"></path><path d="M441.655 49.9254H433.957V43.5146H455.981V49.9254H448.284V75.3321H441.655V49.9254Z" fill="#FFFFFF"></path><path d="M478.199 68.5502H466.859L464.478 75.3321H457.058L468.819 43.5146H476.239L488 75.3321H480.58L478.199 68.5502ZM469.055 62.1395H476.054L472.554 52.2197L469.055 62.1395Z" fill="#FFFFFF"></path></svg></div>
+          <div class="cred-corpo">
+            <div class="cred-evento">EVENTO WL ATACADISTA · OUTUBRO 2026</div>
+            <div class="cred-qr"><div id="qr-alvo"></div></div>
+            <div class="cred-nome" id="cred-nome"></div>
+            <div class="cred-prof" id="cred-prof"></div>
+            <div class="cred-codigo" id="cred-codigo"></div>
+          </div>
+          <div class="cred-rodape">Apresente este QR code na entrada do evento. Guarde um print no seu celular.</div>
+        </div>
+
+        <div class="comprovante" id="comprovante">
+          <div class="comp-cab">
+            <svg xmlns="http://www.w3.org/2000/svg" width="488" height="118" viewBox="0 0 488 118" fill="none"><path d="M176 98.0377L88 117.646L0 98.0377V19.6082L88 0L176 19.6082V98.0377Z" fill="#3C8BD6"></path><path d="M95.8237 39.2166L78.2237 68.6272V39.2166H60.6237L43.0237 68.6272V39.2166H31.2915V78.433H48.6337C50.0087 78.433 51.2806 77.7092 51.9887 76.5304L66.4949 52.2899V78.433H83.8371C85.2121 78.433 86.484 77.7092 87.1921 76.5304L109.519 39.22H95.8306L95.8237 39.2166Z" fill="#F2F2F2"></path><path d="M142.756 68.6272H113.259L130.859 39.2166H117.171L93.7028 78.433H107.391H148.624L142.756 68.6272Z" fill="#F2F2F2"></path><path d="M228.141 68.5502H216.801L214.42 75.3321H207L218.761 43.5146H226.181L237.942 75.3321H230.522L228.141 68.5502ZM218.996 62.1395H225.996L222.496 52.2197L218.996 62.1395Z" fill="#232323"></path><path d="M246.767 49.9254H239.069V43.5146H261.093V49.9254H253.396V75.3321H246.767V49.9254Z" fill="#232323"></path><path d="M283.303 68.5502H271.963L269.582 75.3321H262.162L273.923 43.5146H281.343L293.104 75.3321H285.684L283.303 68.5502ZM274.158 62.1395H281.158L277.658 52.2197L274.158 62.1395Z" fill="#232323"></path><path d="M319.519 74.2101C317.374 75.2392 314.901 75.8465 312.285 75.8465C302.997 75.8465 295.947 68.7357 295.947 59.4233C295.947 50.1108 302.997 43 312.285 43C314.901 43 317.374 43.6073 319.519 44.6364V52.2618C317.744 50.7182 315.229 49.6385 312.285 49.6385C306.875 49.6385 302.761 54.0332 302.761 59.4148C302.761 64.7965 306.825 69.1912 312.285 69.1912C315.221 69.1912 317.837 68.1115 319.519 66.6185V74.2017V74.2101Z" fill="#232323"></path><path d="M344.858 68.5502H333.518L331.137 75.3321H323.717L335.478 43.5146H342.898L354.659 75.3321H347.239L344.858 68.5502ZM335.714 62.1395H342.713L339.214 52.2197L335.714 62.1395Z" fill="#232323"></path><path d="M360.355 43.5146H372.116C381.773 43.5146 387.797 50.111 387.797 59.4234C387.797 68.7358 381.773 75.3321 372.116 75.3321H360.355V43.5146ZM366.984 49.9254V68.9214H372.073C377.811 68.9214 380.94 64.8472 380.94 59.4234C380.94 53.9996 377.811 49.9254 372.073 49.9254H366.984Z" fill="#232323"></path><path d="M395.267 43.5146H401.896V75.3321H395.267V43.5146Z" fill="#232323"></path><path d="M427.513 51.5194C425.881 50.3469 423.079 49.225 420.657 49.225C417.998 49.225 416.736 50.4397 416.736 52.0761C416.736 53.1052 417.578 54.0921 419.117 54.9778L423.315 57.5083C427.42 59.9883 429.052 62.7466 429.052 66.3062C429.052 71.3167 425.738 75.8548 418.368 75.8548C415.239 75.8548 412.345 75.0619 410.343 74.2184V66.8714C412.067 68.2294 415.146 69.6297 418.091 69.6297C420.615 69.6297 422.011 68.415 422.011 66.6774C422.011 65.5977 421.262 64.6192 419.487 63.5901L415.146 61.0174C410.948 58.5881 409.636 55.8719 409.636 52.2701C409.636 47.8248 412.479 43.0083 420.699 43.0083C423.079 43.0083 425.553 43.5735 427.513 44.4592V51.5278V51.5194Z" fill="#232323"></path><path d="M441.655 49.9254H433.957V43.5146H455.981V49.9254H448.284V75.3321H441.655V49.9254Z" fill="#232323"></path><path d="M478.199 68.5502H466.859L464.478 75.3321H457.058L468.819 43.5146H476.239L488 75.3321H480.58L478.199 68.5502ZM469.055 62.1395H476.054L472.554 52.2197L469.055 62.1395Z" fill="#232323"></path></svg>
+            <div class="comp-titulo">COMPROVANTE DE INSCRIÇÃO<span>Evento WL Atacadista · Outubro 2026</span></div>
+          </div>
+          <div class="comp-linha"><span class="comp-rotulo">Nº de inscrição</span><span class="comp-valor comp-codigo" id="comp-codigo"></span></div>
+          <div class="comp-linha"><span class="comp-rotulo">Nome</span><span class="comp-valor" id="comp-nome"></span></div>
+          <div class="comp-linha"><span class="comp-rotulo">Telefone</span><span class="comp-valor" id="comp-tel"></span></div>
+          <div class="comp-linha"><span class="comp-rotulo">Profissão</span><span class="comp-valor" id="comp-prof"></span></div>
+          <div class="comp-linha"><span class="comp-rotulo">E-mail</span><span class="comp-valor" id="comp-email"></span></div>
+          <div class="comp-linha"><span class="comp-rotulo">Data e hora da inscrição</span><span class="comp-valor" id="comp-data"></span></div>
+          <div class="comp-nota">Este comprovante confirma o seu cadastro no evento. A entrada é feita pela credencial digital com QR code. Na versão final do sistema, este comprovante também é enviado automaticamente para o seu e-mail.</div>
+          <div class="comp-acoes">
+            <button class="botao botao-claro" onclick="window.print()">Imprimir / salvar comprovante em PDF</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <button class="botao-linha botao" onclick="novaInscricao()">Fazer outra inscrição</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TELA RECEPÇÃO ============ -->
+  <section class="tela" id="tela-recepcao">
+    <div class="grade-2">
+      <div class="cartao">
+        <h1>Check-in de participantes</h1>
+        <p class="sub">Busque pelo nome ou digite o código da credencial. Na versão final, a leitura do QR code é feita pela câmera do celular.</p>
+        <div class="busca">
+          <input id="busca-recepcao" type="text" placeholder="Nome ou código (ex.: WL-1042)" oninput="renderRecepcao()">
+        </div>
+        <div id="lista-recepcao"></div>
+      </div>
+      <div class="cartao">
+        <h1>Cadastro rápido na porta</h1>
+        <p class="sub">Para quem chegou sem inscrição prévia — entra direto como presente.</p>
+        <div class="campo"><label for="r-nome">Nome completo</label><input id="r-nome" type="text"></div>
+        <div class="campo"><label for="r-tel">Telefone</label><input id="r-tel" type="tel" inputmode="numeric" maxlength="15" placeholder="(61) 99999-9999"></div>
+        <div class="campo"><label for="r-prof">Profissão</label>
+          <select id="r-prof">
+            <option value="">Selecione…</option>
+            <option>Eletricista</option>
+            <option>Engenheiro(a) Eletricista</option>
+            <option>Engenheiro(a) Civil</option>
+            <option>Construtor(a) / Empreiteiro(a)</option>
+            <option>Arquiteto(a)</option>
+            <option>Lojista / Revendedor(a)</option>
+            <option>Comprador(a) corporativo</option>
+            <option>Outra</option>
+          </select>
+        </div>
+        <div class="campo"><label for="r-email">E-mail</label><input id="r-email" type="email"></div>
+        <button class="botao" onclick="cadastroRapido()">Registrar entrada</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TELA ORGANIZAÇÃO ============ -->
+  <section class="tela" id="tela-painel">
+    <div class="metricas">
+      <div class="metrica destaque"><div class="num" id="m-presentes">0</div><div class="rot">Presentes agora</div></div>
+      <div class="metrica"><div class="num" id="m-inscritos">0</div><div class="rot">Inscritos no total</div></div>
+      <div class="metrica"><div class="num" id="m-taxa">0%</div><div class="rot">Comparecimento</div></div>
+      <div class="metrica"><div class="num" id="m-porta">0</div><div class="rot">Cadastros na porta</div></div>
+    </div>
+    <div class="duas-col">
+      <div class="cartao">
+        <div class="titulo-bloco">Perfil do público por profissão</div>
+        <div id="grafico-prof"></div>
+      </div>
+      <div class="cartao">
+        <div class="titulo-bloco">Últimas entradas</div>
+        <div id="feed"></div>
+        <button class="botao botao-linha btn-simular" id="btn-sim" onclick="alternarSimulacao()">▶ Simular chegada de participantes</button>
+      </div>
+    </div>
+    <p class="aviso-demo">Protótipo demonstrativo com dados fictícios. Na versão final, o painel atualiza em tempo real com os check-ins do evento.</p>
+  </section>
+
+</main>
+
+<footer class="rodape-ds">Sistema desenvolvido por <b>DS TecnoFisio</b> · Tecnologia Integrada · Brasília/DF</footer>
+<div id="toast"></div>
+
+<script>
+/* ============ dados em memória (demo) ============ */
+const PROFISSOES = ['Eletricista','Engenheiro(a) Eletricista','Engenheiro(a) Civil','Construtor(a) / Empreiteiro(a)','Arquiteto(a)','Lojista / Revendedor(a)','Comprador(a) corporativo','Outra'];
+
+let proximoCodigo = 1043;
+let _seq = 0;
+function inscritos_seq(){return _seq++;}
+const inscritos = [];
+function ins(nome,tel,prof,email,presente,hora){
+  return {codigo:'WL-'+(1030+inscritos_seq()),nome,tel,prof,email,presente,hora,origem:'online'};
+}
+[
+  ins('Carlos Menezes','(61) 98111-2233','Eletricista','carlos.m@email.com',true,'09:02'),
+  ins('Fernanda Lopes','(61) 99222-3344','Engenheiro(a) Eletricista','fer.lopes@email.com',true,'09:05'),
+  ins('João Pedro Alves','(61) 98333-4455','Construtor(a) / Empreiteiro(a)','jp.alves@email.com',false,null),
+  ins('Mariana Castro','(61) 99444-5566','Arquiteto(a)','mari.castro@email.com',true,'09:11'),
+  ins('Roberto Nunes','(61) 98555-6677','Lojista / Revendedor(a)','rob.nunes@email.com',false,null),
+  ins('Aline Souza','(61) 99666-7788','Eletricista','aline.souza@email.com',true,'09:14'),
+  ins('Diego Martins','(61) 98777-8899','Comprador(a) corporativo','diego.m@email.com',false,null),
+  ins('Patrícia Ramos','(61) 99888-9900','Engenheiro(a) Civil','pat.ramos@email.com',true,'09:20'),
+  ins('Lucas Ferreira','(61) 98123-4567','Eletricista','lucas.f@email.com',false,null),
+  ins('Vanessa Lima','(61) 99234-5678','Lojista / Revendedor(a)','van.lima@email.com',true,'09:26'),
+  ins('André Barbosa','(61) 98345-6789','Construtor(a) / Empreiteiro(a)','andre.b@email.com',false,null),
+  ins('Juliana Costa','(61) 99456-7890','Engenheiro(a) Eletricista','ju.costa@email.com',false,null)
+].forEach(p=>inscritos.push(p));
+
+const NOMES_SIM = ['Paulo Henrique','Renata Dias','Marcos Vinícius','Camila Rocha','Sérgio Teles','Bruna Farias','Tiago Moreira','Larissa Pinto','Eduardo Gomes','Sandra Melo','Felipe Araújo','Cristina Vaz'];
+
+/* ============ util ============ */
+function agora(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function dataHora(){const d=new Date();return d.toLocaleDateString('pt-BR')+' às '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function toast(msg,ok){const t=document.getElementById('toast');t.textContent=msg;t.className=ok?'ok mostrar':'mostrar';setTimeout(()=>t.className=t.className.replace('mostrar',''),2600);}
+function iniciais(nome){return nome.split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();}
+function mascaraTel(el){
+  el.addEventListener('input',()=>{
+    let v=el.value.replace(/\D/g,'').slice(0,11);
+    if(v.length>6) v='('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7);
+    else if(v.length>2) v='('+v.slice(0,2)+') '+v.slice(2);
+    el.value=v;
+  });
+}
+mascaraTel(document.getElementById('f-tel'));
+mascaraTel(document.getElementById('r-tel'));
+
+/* ============ navegação ============ */
+function trocarTela(nome){
+  document.querySelectorAll('.tela').forEach(t=>t.classList.remove('ativa'));
+  document.querySelectorAll('.aba').forEach(a=>a.classList.toggle('ativa',a.dataset.tela===nome));
+  document.getElementById('tela-'+nome).classList.add('ativa');
+  if(nome==='recepcao') renderRecepcao();
+  if(nome==='painel') renderPainel();
+}
+
+/* ============ participante ============ */
+function validar(idCampo,cond){
+  const c=document.getElementById(idCampo);
+  c.classList.toggle('invalido',!cond);
+  return cond;
+}
+function inscrever(){
+  const nome=document.getElementById('f-nome').value.trim();
+  const tel=document.getElementById('f-tel').value.trim();
+  const prof=document.getElementById('f-prof').value;
+  const email=document.getElementById('f-email').value.trim();
+  const okNome=validar('c-nome',nome.split(' ').filter(Boolean).length>=2);
+  const okTel=validar('c-tel',tel.replace(/\D/g,'').length>=10);
+  const okProf=validar('c-prof',!!prof);
+  const okEmail=validar('c-email',/^\S+@\S+\.\S+$/.test(email));
+  if(!(okNome&&okTel&&okProf&&okEmail)) return;
+
+  const codigo='WL-'+(proximoCodigo++);
+  inscritos.push({codigo,nome,tel,prof,email,presente:false,hora:null,origem:'online'});
+
+  document.getElementById('cred-nome').textContent=nome;
+  document.getElementById('cred-prof').textContent=prof;
+  document.getElementById('cred-codigo').textContent=codigo;
+  const alvo=document.getElementById('qr-alvo');
+  alvo.innerHTML='';
+  new QRCode(alvo,{text:codigo,width:160,height:160,colorDark:'#153F68',colorLight:'#FFFFFF'});
+
+  document.getElementById('comp-codigo').textContent=codigo;
+  document.getElementById('comp-nome').textContent=nome;
+  document.getElementById('comp-tel').textContent=tel;
+  document.getElementById('comp-prof').textContent=prof;
+  document.getElementById('comp-email').textContent=email;
+  document.getElementById('comp-data').textContent=dataHora();
+
+  document.getElementById('bloco-form').style.display='none';
+  document.getElementById('bloco-credencial').style.display='block';
+  toast('Inscrição confirmada! Credencial e comprovante gerados.',true);
+}
+function novaInscricao(){
+  ['f-nome','f-tel','f-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-prof').value='';
+  document.getElementById('bloco-form').style.display='block';
+  document.getElementById('bloco-credencial').style.display='none';
+}
+
+/* ============ recepção ============ */
+function renderRecepcao(){
+  const q=document.getElementById('busca-recepcao').value.trim().toLowerCase();
+  const alvo=document.getElementById('lista-recepcao');
+  let lista=inscritos.slice().reverse();
+  if(q) lista=lista.filter(p=>p.nome.toLowerCase().includes(q)||p.codigo.toLowerCase().includes(q));
+  lista=lista.slice(0,8);
+  if(!lista.length){alvo.innerHTML='<div class="vazio">Nenhum participante encontrado.<br>Use o cadastro rápido ao lado.</div>';return;}
+  alvo.innerHTML=lista.map(p=>`
+    <div class="lista-item">
+      <div class="avatar">${iniciais(p.nome)}</div>
+      <div class="li-info">
+        <div class="li-nome">${p.nome}</div>
+        <div class="li-det">${p.codigo} · ${p.prof}</div>
+      </div>
+      ${p.presente
+        ? `<span class="tag tag-presente">Presente · ${p.hora}</span>`
+        : `<button class="btn-checkin" onclick="checkin('${p.codigo}')">Confirmar entrada</button>`}
+    </div>`).join('');
+}
+function checkin(codigo){
+  const p=inscritos.find(x=>x.codigo===codigo);
+  if(!p||p.presente) return;
+  p.presente=true;p.hora=agora();
+  renderRecepcao();
+  toast(p.nome.split(' ')[0]+' — entrada confirmada ✓',true);
+}
+function cadastroRapido(){
+  const nome=document.getElementById('r-nome').value.trim();
+  const tel=document.getElementById('r-tel').value.trim();
+  const prof=document.getElementById('r-prof').value;
+  const email=document.getElementById('r-email').value.trim();
+  if(nome.split(' ').filter(Boolean).length<2||tel.replace(/\D/g,'').length<10||!prof||!/^\S+@\S+\.\S+$/.test(email)){
+    toast('Preencha nome completo, telefone, profissão e e-mail.');return;
+  }
+  inscritos.push({codigo:'WL-'+(proximoCodigo++),nome,tel,prof,email,presente:true,hora:agora(),origem:'porta'});
+  ['r-nome','r-tel','r-email'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('r-prof').value='';
+  renderRecepcao();
+  toast(nome.split(' ')[0]+' — cadastrado e presente ✓',true);
+}
+
+/* ============ painel ============ */
+function renderPainel(){
+  const total=inscritos.length;
+  const presentes=inscritos.filter(p=>p.presente).length;
+  const porta=inscritos.filter(p=>p.origem==='porta').length;
+  document.getElementById('m-presentes').textContent=presentes;
+  document.getElementById('m-inscritos').textContent=total;
+  document.getElementById('m-taxa').textContent=total?Math.round(presentes/total*100)+'%':'0%';
+  document.getElementById('m-porta').textContent=porta;
+
+  const porProf={};
+  inscritos.forEach(p=>{porProf[p.prof]=(porProf[p.prof]||0)+1;});
+  const pares=Object.entries(porProf).sort((a,b)=>b[1]-a[1]);
+  const max=pares.length?pares[0][1]:1;
+  document.getElementById('grafico-prof').innerHTML=pares.map(([prof,n])=>`
+    <div class="barra-linha">
+      <div class="barra-rotulo">${prof.replace(' / ','/')}</div>
+      <div class="barra-trilho"><div class="barra-valor" style="width:${Math.round(n/max*100)}%"></div></div>
+      <div class="barra-num">${n}</div>
+    </div>`).join('');
+
+  const entradas=inscritos.filter(p=>p.presente).slice().reverse().slice(0,7);
+  document.getElementById('feed').innerHTML=entradas.length
+    ? entradas.map(p=>`<div class="feed-item"><span class="feed-hora">${p.hora}</span><span><strong>${p.nome}</strong> · ${p.prof}${p.origem==='porta'?' · cadastro na porta':''}</span></div>`).join('')
+    : '<div class="vazio">Nenhuma entrada registrada ainda.</div>';
+}
+
+/* simulação ao vivo para a reunião */
+let simTimer=null;
+function alternarSimulacao(){
+  const btn=document.getElementById('btn-sim');
+  if(simTimer){clearInterval(simTimer);simTimer=null;btn.textContent='▶ Simular chegada de participantes';return;}
+  btn.textContent='⏸ Pausar simulação';
+  simTimer=setInterval(()=>{
+    const pendentes=inscritos.filter(p=>!p.presente);
+    if(pendentes.length&&Math.random()<0.6){
+      const p=pendentes[Math.floor(Math.random()*pendentes.length)];
+      p.presente=true;p.hora=agora();
+    }else{
+      const nome=NOMES_SIM[Math.floor(Math.random()*NOMES_SIM.length)]+' '+['Silva','Santos','Oliveira','Pereira'][Math.floor(Math.random()*4)];
+      inscritos.push({codigo:'WL-'+(proximoCodigo++),nome,tel:'(61) 9'+Math.floor(8000+Math.random()*1999)+'-'+Math.floor(1000+Math.random()*8999),prof:PROFISSOES[Math.floor(Math.random()*PROFISSOES.length)],email:nome.toLowerCase().split(' ')[0]+'@email.com',presente:true,hora:agora(),origem:Math.random()<0.3?'porta':'online'});
+    }
+    renderPainel();
+  },1800);
+}
+
+renderPainel();
+</script>
+</body>
+</html>

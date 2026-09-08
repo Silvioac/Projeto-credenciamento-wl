@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/*
+ * As variáveis --wl-* são injetadas no <html> pelo layout raiz a partir de
+ * src/config/theme.ts. Aqui só mapeamos para utilitários do Tailwind
+ * (bg-azul, text-tinta-2, border-linha, rounded-cartao...).
+ */
+@theme inline {
+  --color-azul: var(--wl-azul);
+  --color-azul-escuro: var(--wl-azul-escuro);
+  --color-azul-noite: var(--wl-azul-noite);
+  --color-azul-claro: var(--wl-azul-claro);
+  --color-azul-suave: var(--wl-azul-suave);
+  --color-grafite: var(--wl-grafite);
+  --color-claro: var(--wl-claro);
+  --color-fundo: var(--wl-fundo);
+  --color-superficie: var(--wl-superficie);
+  --color-tinta: var(--wl-tinta);
+  --color-tinta-2: var(--wl-tinta2);
+  --color-linha: var(--wl-linha);
+  --color-ok: var(--wl-ok);
+  --color-ok-suave: var(--wl-ok-suave);
+  --color-erro: var(--wl-erro);
+  --color-erro-suave: var(--wl-erro-suave);
+  --color-alerta: var(--wl-alerta);
+  --color-alerta-suave: var(--wl-alerta-suave);
+  --radius-cartao: var(--wl-raio);
+  --font-sans: var(--font-archivo), "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: light;
+}
+
+body {
+  background: var(--wl-fundo);
+  color: var(--wl-tinta);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+/* Foco visível e consistente (acessibilidade) */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--wl-azul);
+  outline-offset: 2px;
+}
+
+/* Impressão: somente o comprovante */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #comprovante,
+  #comprovante * {
+    visibility: visible;
+  }
+  #comprovante {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border: none;
+    margin: 0;
+    box-shadow: none;
+  }
+  .nao-imprimir {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
