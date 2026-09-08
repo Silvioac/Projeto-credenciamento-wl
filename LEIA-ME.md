@@ -40,7 +40,13 @@ npm run test:rls
 Esse teste usa a chave pública e prova que o anônimo consegue **apenas** se inscrever:
 não lê, não conta, não altera, não apaga e não se cadastra como presente. Deve passar 8/8.
 
-### 4. Testar o fluxo completo
+### 4. Limpar os cadastros de teste
+
+Antes de divulgar o QR code, apague os registros usados nos testes: Supabase → **Table
+Editor → inscritos** → selecione as linhas de teste → **Delete**. Assim os números do painel
+começam do zero no dia do evento.
+
+### 5. Testar o fluxo completo
 
 Inscreva-se pelo celular em `/inscricao` → abra `/gestao` em outro aparelho → o nome aparece
 na Recepção → confirme a entrada (câmera ou botão) → o Painel atualiza em até 2 s → exporte o CSV.
