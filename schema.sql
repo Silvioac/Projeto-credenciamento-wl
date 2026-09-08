@@ -90,3 +90,19 @@ create trigger trg_inscritos_atualizado_em
   for each row execute function public.marcar_atualizado_em();
 
 create index if not exists idx_inscritos_atualizado_em on public.inscritos (atualizado_em);
+
+-- =============================================================
+-- Manter o projeto ativo (plano gratuito pausa após 7 dias sem uso).
+-- Função sem acesso a dados: devolve só a hora do servidor, o que
+-- basta para registrar atividade. Chamada 1x/dia pelo cron da Vercel
+-- em /api/manter-ativo. Pode ser reexecutado à vontade.
+-- =============================================================
+create or replace function public.manter_ativo()
+returns timestamptz
+language sql
+stable
+as $$ select now() $$;
+
+grant execute on function public.manter_ativo() to anon, authenticated;
+
+notify pgrst, 'reload schema';
