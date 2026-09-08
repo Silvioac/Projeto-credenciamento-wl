@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Cabecalho } from "@/components/Cabecalho";
 import { StatusConexao } from "@/components/StatusConexao";
 import { useBaseInscritos } from "@/lib/gestao/base";
+import { NOME_PERFIL, limparCachePerfil, usePerfil } from "@/lib/gestao/perfil";
 import { supabaseNavegador } from "@/lib/supabase/client";
 import { Painel } from "./Painel";
 import { Recepcao } from "./Recepcao";
@@ -22,9 +23,13 @@ type Sessao = { estado: "verificando" } | { estado: "ok"; email: string } | { es
 
 export function AreaGestao() {
   const router = useRouter();
-  const aba = useSyncExternalStore(assinarHash, lerAba, lerAbaServidor);
+  const abaNaUrl = useSyncExternalStore(assinarHash, lerAba, lerAbaServidor);
   const [sessao, setSessao] = useState<Sessao>({ estado: "verificando" });
   const base = useBaseInscritos();
+  const perfil = usePerfil();
+
+  // Quem é da recepção não tem o Painel: qualquer tentativa volta para a Recepção.
+  const aba: Aba = abaNaUrl === "painel" && perfil.podeVerPainel ? "painel" : "recepcao";
 
   useEffect(() => {
     const sb = supabaseNavegador();
@@ -54,10 +59,18 @@ export function AreaGestao() {
   }
 
   async function sair() {
+    limparCachePerfil();
     await supabaseNavegador().auth.signOut();
     router.replace("/gestao/login");
     router.refresh();
   }
+
+  const abas: Array<[Aba, string]> = perfil.podeVerPainel
+    ? [
+        ["recepcao", "Recepção"],
+        ["painel", "Painel"],
+      ]
+    : [["recepcao", "Recepção"]];
 
   return (
     <>
@@ -66,40 +79,49 @@ export function AreaGestao() {
           <>
             <StatusConexao />
             {sessao.estado === "ok" ? (
-              <button
-                type="button"
-                onClick={() => void sair()}
-                className="rounded-full border border-linha px-2.5 py-1 text-[11px] font-bold text-tinta-2 hover:border-azul hover:text-azul-escuro"
-                title={sessao.email}
-              >
-                Sair
-              </button>
+              <>
+                <span
+                  className="hidden rounded-full bg-azul-suave px-2.5 py-1 text-[11px] font-bold text-azul-escuro sm:inline"
+                  title={sessao.email}
+                >
+                  {NOME_PERFIL[perfil.perfil]}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void sair()}
+                  className="rounded-full border border-linha px-2.5 py-1 text-[11px] font-bold text-tinta-2 hover:border-azul hover:text-azul-escuro"
+                  title={sessao.email}
+                >
+                  Sair
+                </button>
+              </>
             ) : null}
           </>
         }
       />
-      <nav className="nao-imprimir bg-azul-escuro" aria-label="Seções da gestão">
-        <div className="mx-auto flex max-w-[1040px] gap-0.5 px-4">
-          {(
-            [
-              ["recepcao", "Recepção"],
-              ["painel", "Painel"],
-            ] as const
-          ).map(([chave, rotulo]) => (
-            <button
-              key={chave}
-              type="button"
-              onClick={() => trocar(chave)}
-              aria-current={aba === chave ? "page" : undefined}
-              className={`flex-1 border-b-[3px] px-4 py-3 text-[13.5px] font-semibold sm:flex-none ${
-                aba === chave ? "border-white text-white" : "border-transparent text-azul-claro hover:text-white"
-              }`}
-            >
-              {rotulo}
-            </button>
-          ))}
+      {abas.length > 1 ? (
+        <nav className="nao-imprimir bg-azul-escuro" aria-label="Seções da gestão">
+          <div className="mx-auto flex max-w-[1040px] gap-0.5 px-4">
+            {abas.map(([chave, rotulo]) => (
+              <button
+                key={chave}
+                type="button"
+                onClick={() => trocar(chave)}
+                aria-current={aba === chave ? "page" : undefined}
+                className={`flex-1 border-b-[3px] px-4 py-3 text-[13.5px] font-semibold sm:flex-none ${
+                  aba === chave ? "border-white text-white" : "border-transparent text-azul-claro hover:text-white"
+                }`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+        </nav>
+      ) : (
+        <div className="nao-imprimir bg-azul-escuro px-4 py-3">
+          <div className="mx-auto max-w-[1040px] text-[13.5px] font-semibold text-white">Recepção</div>
         </div>
-      </nav>
+      )}
 
       <main className="mx-auto w-full max-w-[1040px] flex-1 px-4 pb-14 pt-5">
         {sessao.estado === "sem_sessao" ? (
@@ -109,7 +131,7 @@ export function AreaGestao() {
         ) : aba === "recepcao" ? (
           <Recepcao base={base} />
         ) : (
-          <Painel base={base} />
+          <Painel base={base} podeExportar={perfil.podeExportar} />
         )}
       </main>
     </>

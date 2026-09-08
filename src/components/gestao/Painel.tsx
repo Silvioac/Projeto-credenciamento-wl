@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Botao } from "@/components/ui/Botao";
 import { useToast } from "@/components/ui/Toast";
 import { baixarCsv } from "@/lib/csv";
+import { baixarPdf } from "@/lib/pdf";
 import { formatarHora } from "@/lib/formato";
 import type { BaseInscritos } from "@/lib/gestao/base";
 import { calcularPainel } from "@/lib/gestao/painel";
@@ -19,23 +20,23 @@ function Metrica({ valor, rotulo, destaque }: { valor: string | number; rotulo: 
   );
 }
 
-export function Painel({ base }: { base: BaseInscritos }) {
+export function Painel({ base, podeExportar = true }: { base: BaseInscritos; podeExportar?: boolean }) {
   const toast = useToast();
-  const [exportando, setExportando] = useState(false);
+  const [exportando, setExportando] = useState<"csv" | "pdf" | null>(null);
   const dados = useMemo(() => calcularPainel(base.inscritos), [base.inscritos]);
   const maximo = dados.profissoes[0]?.total ?? 1;
 
-  async function exportar() {
-    setExportando(true);
+  async function exportar(formato: "csv" | "pdf") {
+    setExportando(formato);
     try {
       // Com rede, baixa a base fresca do servidor; sem rede, usa a cópia local.
       const lista = navigator.onLine ? await buscarTodosInscritos() : base.inscritos;
-      const arquivo = baixarCsv(lista);
-      toast(`CSV gerado: ${arquivo} (${lista.length} registros)`, "ok");
+      const arquivo = formato === "csv" ? baixarCsv(lista) : await baixarPdf(lista);
+      toast(`Arquivo gerado: ${arquivo} (${lista.length} registros)`, "ok");
     } catch (e) {
       toast(`Falha ao exportar: ${mensagemDeErro(e)}`, "erro");
     } finally {
-      setExportando(false);
+      setExportando(null);
     }
   }
 
@@ -93,11 +94,28 @@ export function Painel({ base }: { base: BaseInscritos }) {
               ))}
             </ul>
           )}
-          <div className="mt-4">
-            <Botao type="button" variante="linha" carregando={exportando} onClick={() => void exportar()}>
-              ⬇ Exportar CSV (base completa)
-            </Botao>
-          </div>
+          {podeExportar ? (
+            <div className="mt-4 grid gap-2">
+              <Botao
+                type="button"
+                variante="linha"
+                carregando={exportando === "csv"}
+                disabled={exportando !== null}
+                onClick={() => void exportar("csv")}
+              >
+                ⬇ Exportar planilha (CSV)
+              </Botao>
+              <Botao
+                type="button"
+                variante="linha"
+                carregando={exportando === "pdf"}
+                disabled={exportando !== null}
+                onClick={() => void exportar("pdf")}
+              >
+                ⬇ Exportar relatório (PDF)
+              </Botao>
+            </div>
+          ) : null}
         </section>
       </div>
 

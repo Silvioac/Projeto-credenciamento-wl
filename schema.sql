@@ -136,3 +136,74 @@ grant select on public.painel_resumo to authenticated;
 grant select on public.painel_profissoes to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- =============================================================
+-- PERFIS DE ACESSO (recepção x administrativo)
+-- Quem não tiver linha em `perfis` é tratado como 'recepcao'
+-- (o menos privilegiado). Pode ser reexecutado à vontade.
+-- =============================================================
+create table if not exists public.perfis (
+  usuario_id uuid primary key references auth.users(id) on delete cascade,
+  perfil     text not null default 'recepcao' check (perfil in ('recepcao','admin')),
+  nome       text,
+  criado_em  timestamptz not null default now()
+);
+
+alter table public.perfis enable row level security;
+
+-- SECURITY DEFINER de propósito: as policies precisam ler esta tabela
+-- sem cair em recursão de RLS. Não recebe parâmetro, não expõe nada.
+create or replace function public.meu_perfil()
+returns text language sql stable security definer set search_path = '' as $$
+  select coalesce(
+    (select p.perfil from public.perfis p where p.usuario_id = auth.uid()),
+    'recepcao'
+  )
+$$;
+
+create or replace function public.eh_admin()
+returns boolean language sql stable security definer set search_path = '' as $$
+  select public.meu_perfil() = 'admin'
+$$;
+
+-- Cada um enxerga o próprio perfil; o administrativo enxerga todos.
+-- Ninguém altera perfis pela aplicação (só pelo painel do Supabase).
+drop policy if exists "perfil_proprio" on public.perfis;
+create policy "perfil_proprio" on public.perfis
+  for select to authenticated
+  using (usuario_id = auth.uid() or public.eh_admin());
+
+revoke all on public.perfis from anon, authenticated;
+grant select on public.perfis to authenticated;
+
+-- ---------------------------------------------------------------
+-- Trava real: recepção só registra entrada, nunca edita cadastro
+-- nem desfaz presença. Vale mesmo se alguém chamar a API direto.
+-- ---------------------------------------------------------------
+create or replace function public.limitar_update_recepcao()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if public.eh_admin() then
+    return new;
+  end if;
+  if new.codigo    is distinct from old.codigo
+  or new.nome      is distinct from old.nome
+  or new.telefone  is distinct from old.telefone
+  or new.profissao is distinct from old.profissao
+  or new.email     is distinct from old.email
+  or new.origem    is distinct from old.origem
+  or new.criado_em is distinct from old.criado_em then
+    raise exception 'Perfil recepção pode apenas registrar a entrada.' using errcode = '42501';
+  end if;
+  if old.presente and not new.presente then
+    raise exception 'Perfil recepção não pode desfazer uma entrada.' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_limitar_update_recepcao on public.inscritos;
+create trigger trg_limitar_update_recepcao
+  before update on public.inscritos
+  for each row execute function public.limitar_update_recepcao();
+
+notify pgrst, 'reload schema';

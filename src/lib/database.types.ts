@@ -57,6 +57,27 @@ export type Database = {
         }
         Relationships: []
       }
+      perfis: {
+        Row: {
+          criado_em: string
+          nome: string | null
+          perfil: string
+          usuario_id: string
+        }
+        Insert: {
+          criado_em?: string
+          nome?: string | null
+          perfil?: string
+          usuario_id: string
+        }
+        Update: {
+          criado_em?: string
+          nome?: string | null
+          perfil?: string
+          usuario_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       painel_profissoes: {
@@ -77,7 +98,9 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      eh_admin: { Args: never; Returns: boolean }
+      manter_ativo: { Args: never; Returns: string }
+      meu_perfil: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
