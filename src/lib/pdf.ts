@@ -99,46 +99,47 @@ export async function baixarPdf(inscritos: Inscrito[]): Promise<string> {
   });
 
   // ---------- lista completa ----------
-  doc.addPage();
+  // Nove colunas não cabem em A4 retrato (precisariam de ~216 mm num espaço de 194 mm,
+  // e a última coluna era cortada). A lista vai em paisagem, onde sobra folga.
+  doc.addPage("a4", "landscape");
+  const larguraPaisagem = doc.internal.pageSize.getWidth();
+  const MARGEM = 8;
   doc.setTextColor(...AZUL);
   doc.setFont("helvetica", "bold").setFontSize(11);
-  doc.text(`Lista de participantes (${dados.resumo.total})`, 14, 16);
+  doc.text(`Lista de participantes (${dados.resumo.total})`, MARGEM, 14);
 
+  // Soma = 278 mm, dentro dos 281 mm úteis da paisagem (297 - 2 x 8).
+  const larguras = [20, 52, 28, 42, 58, 16, 16, 16, 30];
   autoTable(doc, {
-    startY: 20,
+    startY: 18,
     head: [[...COLUNAS_RELATORIO]],
     body: linhasRelatorio(ordenarParaRelatorio(inscritos)),
     theme: "striped",
-    styles: { fontSize: 6.5, cellPadding: 1.2, overflow: "linebreak" },
-    headStyles: { fillColor: AZUL, textColor: 255, fontStyle: "bold", fontSize: 6.5 },
+    styles: { fontSize: 7, cellPadding: 1.4, overflow: "linebreak" },
+    headStyles: { fillColor: AZUL, textColor: 255, fontStyle: "bold", fontSize: 7 },
     alternateRowStyles: { fillColor: [246, 249, 252] },
-    columnStyles: {
-      0: { cellWidth: 18 },
-      1: { cellWidth: 38 },
-      2: { cellWidth: 24 },
-      3: { cellWidth: 30 },
-      4: { cellWidth: 42 },
-      5: { cellWidth: 13, halign: "center" },
-      6: { cellWidth: 13, halign: "center" },
-      7: { cellWidth: 14, halign: "center" },
-      8: { cellWidth: 24 },
-    },
-    margin: { left: 8, right: 8, top: 14, bottom: 14 },
+    columnStyles: Object.fromEntries(
+      larguras.map((w, i) => [i, { cellWidth: w, halign: i >= 5 && i <= 7 ? "center" : "left" }]),
+    ),
+    margin: { left: MARGEM, right: MARGEM, top: 12, bottom: 12 },
+    tableWidth: larguraPaisagem - MARGEM * 2,
   });
 
   // ---------- rodapé em todas as páginas ----------
   const paginas = doc.getNumberOfPages();
   for (let p = 1; p <= paginas; p++) {
     doc.setPage(p);
+    // Retrato e paisagem convivem no mesmo arquivo: medir página a página.
+    const l = doc.internal.pageSize.getWidth();
     const altura = doc.internal.pageSize.getHeight();
     doc.setFont("helvetica", "normal").setFontSize(7);
     doc.setTextColor(...TINTA2);
     doc.text(
       `${evento.nome} · documento com dados pessoais, uso restrito à organização`,
-      8,
+      MARGEM,
       altura - 6,
     );
-    doc.text(`Página ${p} de ${paginas}`, largura - 8, altura - 6, { align: "right" });
+    doc.text(`Página ${p} de ${paginas}`, l - MARGEM, altura - 6, { align: "right" });
   }
 
   const nome = `${nomeArquivo("relatorio")}.pdf`;
