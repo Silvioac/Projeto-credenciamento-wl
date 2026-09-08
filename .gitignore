@@ -45,3 +45,6 @@ next-env.d.ts
 
 # capturas dos testes de navegador
 tests/navegador/capturas/
+
+# saidas do teste de carga
+tests/carga/saida/

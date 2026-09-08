@@ -14,7 +14,14 @@ import type { DadosInscricao } from "@/lib/validacao";
 import { ConfirmacaoCheckin } from "./ConfirmacaoCheckin";
 import { LeitorQR } from "./LeitorQR";
 
-const LIMITE_LISTA = 40;
+/**
+ * Sem busca, a lista serve só de referência das últimas inscrições — e ela muda
+ * sozinha conforme chegam inscrições novas. Mantê-la curta encurta a página e
+ * reduz a chance de a lista se mexer debaixo do dedo de quem vai tocar em
+ * "Confirmar entrada". Buscando, mostramos bem mais.
+ */
+const LIMITE_SEM_BUSCA = 12;
+const LIMITE_COM_BUSCA = 40;
 
 function ItemInscrito({ inscrito, aoConfirmar, ocupado }: { inscrito: Inscrito; aoConfirmar: () => void; ocupado: boolean }) {
   return (
@@ -59,7 +66,7 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
   const resultados = useMemo(() => {
     const termo = normalizarBusca(busca);
     const lista = [...base.inscritos].sort((a, b) => b.criado_em.localeCompare(a.criado_em));
-    if (!termo) return lista.slice(0, LIMITE_LISTA);
+    if (!termo) return lista.slice(0, LIMITE_SEM_BUSCA);
     const codigo = normalizarCodigo(busca);
     const filtrada = lista.filter(
       (i) =>
@@ -70,7 +77,7 @@ export function Recepcao({ base }: { base: BaseInscritos }) {
     );
     // Código exato primeiro
     filtrada.sort((a, b) => Number(b.codigo === codigo) - Number(a.codigo === codigo));
-    return filtrada.slice(0, LIMITE_LISTA);
+    return filtrada.slice(0, LIMITE_COM_BUSCA);
   }, [busca, base.inscritos]);
 
   const confirmar = useCallback(

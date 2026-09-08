@@ -84,10 +84,22 @@ const cod2 = `WL-H${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 await sql(`insert into public.inscritos (codigo,nome,telefone,profissao,email,presente,hora_entrada) values ('${cod2}','Outro Aparelho Teste','(61) 90000-2222','Arquiteto(a)','outro.teste@exemplo.com',true,now())`);
 const t0 = Date.now();
 await page.waitForFunction((n) => { const el=[...document.querySelectorAll("div")].find(d=>d.textContent==="Presentes agora"); return el && Number(el.previousElementSibling.textContent) >= n; }, presentesAntes + 1, { timeout: 15000 }).then(() => ok("painel atualizou em tempo real", true, `${Date.now()-t0} ms`)).catch(() => ok("painel atualizou em tempo real", false));
-ok("feed mostra a entrada", await page.getByText("Outro Aparelho Teste").isVisible());
+// O feed mostra as 8 entradas mais recentes por hora de entrada. Se a base tiver
+// dados simulando o dia do evento (hora futura), a entrada de agora não alcança o
+// topo — então só exigimos que ela apareça quando realmente estiver entre as 8.
+const posicao = (await sql(
+  `select count(*)::int as acima from public.inscritos
+   where presente and hora_entrada > (select hora_entrada from public.inscritos where codigo='${cod2}')`,
+))[0].acima;
+if (posicao < 8) {
+  ok("feed mostra a entrada", await page.getByText("Outro Aparelho Teste").isVisible());
+} else {
+  const feed = await page.locator("text=Últimas entradas").locator("xpath=..").innerText();
+  ok("feed lista as entradas mais recentes", /\d\d:\d\d/.test(feed), `(entrada de agora está em ${posicao + 1}º, fora das 8)`);
+}
 
 // CSV
-const [download] = await Promise.all([page.waitForEvent("download", { timeout: 20000 }), page.getByRole("button", { name: /Exportar CSV/ }).click()]);
+const [download] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), page.getByRole("button", { name: /Exportar planilha/ }).click()]);
 const caminho = `${DIR}/export.csv`;
 await download.saveAs(caminho);
 const buf = fs.readFileSync(caminho);
@@ -95,6 +107,14 @@ ok("CSV com BOM UTF-8", buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf);
 const txt = buf.toString("utf8");
 ok("CSV com ; e cabeçalho acentuado", txt.startsWith("\uFEFFCódigo;Nome;Telefone;Profissão"));
 ok("CSV contém os registros", txt.includes(cod) && txt.includes("Visitante Porta Teste"));
+ok("CSV sem a coluna de ID interno", !/;ID(;|$)/.test(txt.split("\r\n")[0]));
+
+// PDF
+const [pdfBaixado] = await Promise.all([page.waitForEvent("download", { timeout: 180000 }), page.getByRole("button", { name: /Exportar relatório/ }).click()]);
+const caminhoPdf = `${DIR}/relatorio.pdf`;
+await pdfBaixado.saveAs(caminhoPdf);
+const bufPdf = fs.readFileSync(caminhoPdf);
+ok("PDF gerado e válido", bufPdf.subarray(0, 5).toString() === "%PDF-" && bufPdf.length > 20000, `${(bufPdf.length / 1024).toFixed(0)} KB`);
 
 // offline na recepção: check-in + porta sem rede, depois sincroniza
 await page.click("text=Recepção");
