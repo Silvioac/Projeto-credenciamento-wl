@@ -136,6 +136,22 @@ A resposta esperada é `{"ok":true,...,"horaDoBanco":"..."}`. Se um dia o projet
 mesmo assim, basta abrir o painel do Supabase e clicar em **Restore project**; nenhum dado se
 perde.
 
+### Rede de segurança no GitHub (recomendado)
+
+Como o cron da Vercel depende do plano da conta, existe um segundo mecanismo independente em
+`.github/workflows/manter-supabase-ativo.yml`, que roda todo dia ao meio-dia de Brasília.
+Para ligá-lo, no GitHub → **Settings → Secrets and variables → Actions → New repository
+secret**, cadastre:
+
+| Nome | Valor |
+|---|---|
+| `SUPABASE_URL` | `https://fcbpcrakjakyagcvbxqq.supabase.co` |
+| `SUPABASE_ANON_KEY` | a chave *publishable* (`sb_publishable_…`) |
+
+Depois, na aba **Actions**, abra "Manter o Supabase ativo" e clique em **Run workflow** para
+testar na hora. Com os dois mecanismos, o banco só pausaria se Vercel e GitHub falhassem
+juntos por sete dias seguidos.
+
 ## Teste manual do modo offline (DevTools)
 
 1. Abra `/inscricao` no Chrome, F12 → aba **Application → Service Workers**: deve aparecer

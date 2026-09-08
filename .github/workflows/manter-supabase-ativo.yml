@@ -1,0 +1,41 @@
+name: Manter o Supabase ativo
+
+# Rede de segurança independente da Vercel.
+# O plano gratuito do Supabase pausa projetos com 7 dias sem requisição; este fluxo
+# chama a função manter_ativo() todo dia, que só devolve a hora do servidor.
+#
+# Para ativar, cadastre em Settings → Secrets and variables → Actions:
+#   SUPABASE_URL       = https://SEU-PROJETO.supabase.co
+#   SUPABASE_ANON_KEY  = a chave publishable (sb_publishable_...)
+
+on:
+  schedule:
+    # Todo dia às 15:00 UTC (12:00 em Brasília), longe do cron da Vercel.
+    - cron: "0 15 * * *"
+  workflow_dispatch: # permite rodar à mão pela aba Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar manter_ativo()
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CHAVE: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$CHAVE" ]; then
+            echo "Cadastre os segredos SUPABASE_URL e SUPABASE_ANON_KEY no repositório."
+            exit 1
+          fi
+          resposta=$(curl -sS -w "\n%{http_code}" -X POST "$URL/rest/v1/rpc/manter_ativo" \
+            -H "apikey: $CHAVE" \
+            -H "Authorization: Bearer $CHAVE" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          codigo=$(echo "$resposta" | tail -n1)
+          corpo=$(echo "$resposta" | sed '$d')
+          echo "HTTP $codigo — hora do banco: $corpo"
+          if [ "$codigo" != "200" ]; then
+            echo "Falha ao manter o projeto ativo."
+            exit 1
+          fi
