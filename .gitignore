@@ -48,3 +48,6 @@ tests/navegador/capturas/
 
 # saidas do teste de carga
 tests/carga/saida/
+
+# documentos gerados (nao versionar material contratual em repo publico)
+documentos/
