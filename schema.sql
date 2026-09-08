@@ -106,3 +106,33 @@ as $$ select now() $$;
 grant execute on function public.manter_ativo() to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- =============================================================
+-- Endurecimento (defesa em profundidade).
+-- A RLS já bloqueia tudo isso, mas o Supabase concede por padrão
+-- privilégios amplos às roles públicas. Aqui deixamos cada papel
+-- só com o que ele realmente precisa, para que um erro futuro de
+-- RLS não exponha a base sozinho.
+-- Pode ser reexecutado à vontade.
+-- =============================================================
+
+-- Fixa o search_path das funções (evita sequestro por objetos de outro schema).
+alter function public.manter_ativo() set search_path = '';
+alter function public.marcar_atualizado_em() set search_path = '';
+
+-- Público (link de divulgação): SÓ inserir a própria inscrição.
+revoke all on public.inscritos from anon;
+grant insert on public.inscritos to anon;
+revoke all on public.painel_resumo from anon;
+revoke all on public.painel_profissoes from anon;
+
+-- Equipe logada: ler, inserir e atualizar. Nunca apagar nem truncar
+-- (exclusão de registros só pelo painel do Supabase, por um administrador).
+revoke all on public.inscritos from authenticated;
+grant select, insert, update on public.inscritos to authenticated;
+revoke all on public.painel_resumo from authenticated;
+revoke all on public.painel_profissoes from authenticated;
+grant select on public.painel_resumo to authenticated;
+grant select on public.painel_profissoes to authenticated;
+
+notify pgrst, 'reload schema';
