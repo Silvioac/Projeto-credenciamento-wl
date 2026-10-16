@@ -4,11 +4,14 @@ import { evento } from "@/config/evento";
 import { tema } from "@/config/theme";
 import { calcularPainel } from "./gestao/painel";
 import {
+  COLUNAS_PRESENTES,
   COLUNAS_RELATORIO,
   baixarArquivo,
+  linhasPresentes,
   linhasRelatorio,
   nomeArquivo,
   ordenarParaRelatorio,
+  somentePresentes,
 } from "./relatorio";
 import type { Inscrito } from "./tipos";
 
@@ -24,34 +27,62 @@ function rgb(hex: string): [number, number, number] {
 const AZUL = rgb(tema.cores.azulEscuro);
 const AZUL_CLARO = rgb(tema.cores.azulSuave);
 const TINTA2 = rgb(tema.cores.tinta2);
+const MARGEM = 8;
+
+type Pdf = InstanceType<(typeof import("jspdf"))["jsPDF"]>;
 
 /**
- * Relatório em PDF: resumo, perfil por profissão e a lista completa.
  * O jsPDF entra por import dinâmico para não pesar na página de inscrição,
  * que é a que o participante abre no celular.
  */
-export async function baixarPdf(inscritos: Inscrito[]): Promise<string> {
-  const [{ jsPDF }, { autoTable }] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
+async function carregarJsPdf() {
+  const [{ jsPDF }, { autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+  return { jsPDF, autoTable };
+}
 
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+function cabecalho(doc: Pdf, titulo: string): void {
   const largura = doc.internal.pageSize.getWidth();
-  const dados = calcularPainel(inscritos); // o feed de entradas não entra no relatório
   const geradoEm = new Date().toLocaleString("pt-BR", { timeZone: evento.fusoHorario });
-
-  // ---------- cabeçalho ----------
   doc.setFillColor(...AZUL);
   doc.rect(0, 0, largura, 26, "F");
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold").setFontSize(14);
-  doc.text("Relatório de credenciamento", 14, 11);
+  doc.text(titulo, 14, 11);
   doc.setFont("helvetica", "normal").setFontSize(9);
   doc.text(`${evento.nome} · ${evento.subtitulo}`, 14, 17);
   doc.text(`${evento.dataTexto} · ${evento.horarioTexto} · ${evento.local}`, 14, 22);
   doc.setFontSize(8);
   doc.text(`Emitido em ${geradoEm}`, largura - 14, 22, { align: "right" });
+}
+
+/** Rodapé em todas as páginas. */
+function rodape(doc: Pdf): void {
+  const paginas = doc.getNumberOfPages();
+  for (let p = 1; p <= paginas; p++) {
+    doc.setPage(p);
+    // Retrato e paisagem convivem no mesmo arquivo: medir página a página.
+    const l = doc.internal.pageSize.getWidth();
+    const altura = doc.internal.pageSize.getHeight();
+    doc.setFont("helvetica", "normal").setFontSize(7);
+    doc.setTextColor(...TINTA2);
+    doc.text(
+      `${evento.nome} · documento com dados pessoais, uso restrito à organização`,
+      MARGEM,
+      altura - 6,
+    );
+    doc.text(`Página ${p} de ${paginas}`, l - MARGEM, altura - 6, { align: "right" });
+  }
+}
+
+/** Relatório em PDF: resumo, perfil por profissão e a lista completa. */
+export async function baixarPdf(inscritos: Inscrito[]): Promise<string> {
+  const { jsPDF, autoTable } = await carregarJsPdf();
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const largura = doc.internal.pageSize.getWidth();
+  const dados = calcularPainel(inscritos); // o feed de entradas não entra no relatório
+
+  cabecalho(doc, "Relatório de credenciamento");
 
   // ---------- resumo ----------
   const resumo: Array<[string, string]> = [
@@ -103,7 +134,6 @@ export async function baixarPdf(inscritos: Inscrito[]): Promise<string> {
   // e a última coluna era cortada). A lista vai em paisagem, onde sobra folga.
   doc.addPage("a4", "landscape");
   const larguraPaisagem = doc.internal.pageSize.getWidth();
-  const MARGEM = 8;
   doc.setTextColor(...AZUL);
   doc.setFont("helvetica", "bold").setFontSize(11);
   doc.text(`Lista de participantes (${dados.resumo.total})`, MARGEM, 14);
@@ -125,24 +155,46 @@ export async function baixarPdf(inscritos: Inscrito[]): Promise<string> {
     tableWidth: larguraPaisagem - MARGEM * 2,
   });
 
-  // ---------- rodapé em todas as páginas ----------
-  const paginas = doc.getNumberOfPages();
-  for (let p = 1; p <= paginas; p++) {
-    doc.setPage(p);
-    // Retrato e paisagem convivem no mesmo arquivo: medir página a página.
-    const l = doc.internal.pageSize.getWidth();
-    const altura = doc.internal.pageSize.getHeight();
-    doc.setFont("helvetica", "normal").setFontSize(7);
-    doc.setTextColor(...TINTA2);
-    doc.text(
-      `${evento.nome} · documento com dados pessoais, uso restrito à organização`,
-      MARGEM,
-      altura - 6,
-    );
-    doc.text(`Página ${p} de ${paginas}`, l - MARGEM, altura - 6, { align: "right" });
-  }
+  rodape(doc);
 
   const nome = `${nomeArquivo("relatorio")}.pdf`;
   baixarArquivo(doc.output("blob"), nome);
   return nome;
+}
+
+/**
+ * Lista de presentes para o sorteio: só quem fez check-in, numerada e em
+ * ordem alfabética. Cabe em A4 retrato (188 mm de colunas em 194 mm úteis).
+ */
+export async function baixarPdfPresentes(inscritos: Inscrito[]): Promise<{ arquivo: string; total: number }> {
+  const { jsPDF, autoTable } = await carregarJsPdf();
+  const presentes = somentePresentes(inscritos);
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  cabecalho(doc, "Lista de presentes · sorteio");
+
+  doc.setTextColor(...AZUL);
+  doc.setFont("helvetica", "bold").setFontSize(11);
+  doc.text(`Presentes com check-in: ${presentes.length}`, 11, 34);
+
+  const larguras = [12, 22, 62, 30, 46, 16];
+  autoTable(doc, {
+    startY: 38,
+    head: [[...COLUNAS_PRESENTES]],
+    body: linhasPresentes(presentes),
+    theme: "striped",
+    styles: { fontSize: 8, cellPadding: 1.6, overflow: "linebreak" },
+    headStyles: { fillColor: AZUL, textColor: 255, fontStyle: "bold" },
+    alternateRowStyles: { fillColor: [246, 249, 252] },
+    columnStyles: Object.fromEntries(
+      larguras.map((w, i) => [i, { cellWidth: w, halign: i === 0 || i === 5 ? "center" : "left" }]),
+    ),
+    margin: { left: 11, right: 11, top: 12, bottom: 12 },
+  });
+
+  rodape(doc);
+
+  const arquivo = `${nomeArquivo("presentes")}.pdf`;
+  baixarArquivo(doc.output("blob"), arquivo);
+  return { arquivo, total: presentes.length };
 }

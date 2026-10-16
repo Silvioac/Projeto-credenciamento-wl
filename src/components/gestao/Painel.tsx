@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { Botao } from "@/components/ui/Botao";
 import { useToast } from "@/components/ui/Toast";
-import { baixarCsv } from "@/lib/csv";
-import { baixarPdf } from "@/lib/pdf";
+import { baixarCsv, baixarCsvPresentes } from "@/lib/csv";
+import { baixarPdf, baixarPdfPresentes } from "@/lib/pdf";
 import { formatarHora } from "@/lib/formato";
 import type { BaseInscritos } from "@/lib/gestao/base";
 import { calcularPainel } from "@/lib/gestao/painel";
@@ -20,17 +20,25 @@ function Metrica({ valor, rotulo, destaque }: { valor: string | number; rotulo: 
   );
 }
 
+type Exportacao = "csv" | "pdf" | "presentes-csv" | "presentes-pdf";
+
 export function Painel({ base, podeExportar = true }: { base: BaseInscritos; podeExportar?: boolean }) {
   const toast = useToast();
-  const [exportando, setExportando] = useState<"csv" | "pdf" | null>(null);
+  const [exportando, setExportando] = useState<Exportacao | null>(null);
   const dados = useMemo(() => calcularPainel(base.inscritos), [base.inscritos]);
   const maximo = dados.profissoes[0]?.total ?? 1;
 
-  async function exportar(formato: "csv" | "pdf") {
+  async function exportar(formato: Exportacao) {
     setExportando(formato);
     try {
       // Com rede, baixa a base fresca do servidor; sem rede, usa a cópia local.
       const lista = navigator.onLine ? await buscarTodosInscritos() : base.inscritos;
+      if (formato === "presentes-csv" || formato === "presentes-pdf") {
+        const { arquivo, total } =
+          formato === "presentes-csv" ? baixarCsvPresentes(lista) : await baixarPdfPresentes(lista);
+        toast(`Arquivo gerado: ${arquivo} (${total} presentes)`, "ok");
+        return;
+      }
       const arquivo = formato === "csv" ? baixarCsv(lista) : await baixarPdf(lista);
       toast(`Arquivo gerado: ${arquivo} (${lista.length} registros)`, "ok");
     } catch (e) {
@@ -113,6 +121,28 @@ export function Painel({ base, podeExportar = true }: { base: BaseInscritos; pod
                 onClick={() => void exportar("pdf")}
               >
                 ⬇ Exportar relatório (PDF)
+              </Botao>
+              <h3 className="mt-3 text-[13px] font-bold text-azul-escuro">Sorteio · apenas quem fez check-in</h3>
+              <p className="-mt-1 text-[11.5px] text-tinta-2">
+                Lista numerada dos {dados.resumo.presentes} presentes, em ordem alfabética.
+              </p>
+              <Botao
+                type="button"
+                variante="linha"
+                carregando={exportando === "presentes-csv"}
+                disabled={exportando !== null}
+                onClick={() => void exportar("presentes-csv")}
+              >
+                ⬇ Presentes para sorteio (CSV)
+              </Botao>
+              <Botao
+                type="button"
+                variante="linha"
+                carregando={exportando === "presentes-pdf"}
+                disabled={exportando !== null}
+                onClick={() => void exportar("presentes-pdf")}
+              >
+                ⬇ Presentes para sorteio (PDF)
               </Botao>
             </div>
           ) : null}

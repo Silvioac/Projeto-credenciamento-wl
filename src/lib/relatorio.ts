@@ -33,6 +33,29 @@ export function linhasRelatorio(inscritos: Inscrito[]): string[][] {
   ]);
 }
 
+/**
+ * Lista de presentes (para sorteio): só quem fez check-in, numerada.
+ * O número dá a cada presente uma posição fixa para o sorteio; o telefone
+ * serve para chamar o ganhador que não estiver por perto.
+ */
+export const COLUNAS_PRESENTES = ["Nº", "Código", "Nome", "Telefone", "Profissão", "Entrada"] as const;
+
+export function somentePresentes(inscritos: Inscrito[]): Inscrito[] {
+  return ordenarParaRelatorio(inscritos.filter((i) => i.presente));
+}
+
+/** Espera a lista já filtrada e ordenada por `somentePresentes`. */
+export function linhasPresentes(presentes: Inscrito[]): string[][] {
+  return presentes.map((i, n) => [
+    String(n + 1),
+    i.codigo,
+    i.nome,
+    i.telefone,
+    i.profissao,
+    formatarHora(i.hora_entrada),
+  ]);
+}
+
 /** Ordena por nome, que é como a organização costuma conferir a lista. */
 export function ordenarParaRelatorio(inscritos: Inscrito[]): Inscrito[] {
   return [...inscritos].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
