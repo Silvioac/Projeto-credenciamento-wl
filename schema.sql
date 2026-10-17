@@ -207,3 +207,38 @@ create trigger trg_limitar_update_recepcao
   for each row execute function public.limitar_update_recepcao();
 
 notify pgrst, 'reload schema';
+
+-- ============================================================
+-- Sorteio ao vivo (17/10/2026): quem está na plateia lê o QR do
+-- telão e se cadastra com nome e telefone. Mesma postura da
+-- inscrição: o anônimo só insere, nunca lê.
+-- ============================================================
+create table if not exists public.sorteio (
+  id          uuid primary key default gen_random_uuid(),
+  nome        text not null check (char_length(nome) between 3 and 120),
+  telefone    text not null unique check (char_length(telefone) between 14 and 15),
+  criado_em   timestamptz not null default now(),
+  sorteado_em timestamptz
+);
+
+alter table public.sorteio enable row level security;
+
+drop policy if exists "sorteio_entrar" on public.sorteio;
+create policy "sorteio_entrar" on public.sorteio
+  for insert to anon, authenticated
+  with check (sorteado_em is null);
+
+drop policy if exists "sorteio_ler" on public.sorteio;
+create policy "sorteio_ler" on public.sorteio
+  for select to authenticated using (true);
+
+drop policy if exists "sorteio_sortear" on public.sorteio;
+create policy "sorteio_sortear" on public.sorteio
+  for update to authenticated using (public.eh_admin()) with check (public.eh_admin());
+
+drop policy if exists "sorteio_zerar" on public.sorteio;
+create policy "sorteio_zerar" on public.sorteio
+  for delete to authenticated using (public.eh_admin());
+
+grant insert on public.sorteio to anon;
+grant select, insert, update, delete on public.sorteio to authenticated;

@@ -78,6 +78,30 @@ export type Database = {
         }
         Relationships: []
       }
+      sorteio: {
+        Row: {
+          criado_em: string
+          id: string
+          nome: string
+          sorteado_em: string | null
+          telefone: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          nome: string
+          sorteado_em?: string | null
+          telefone: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          nome?: string
+          sorteado_em?: string | null
+          telefone?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       painel_profissoes: {

@@ -9,10 +9,12 @@ import { NOME_PERFIL, limparCachePerfil, usePerfil } from "@/lib/gestao/perfil";
 import { supabaseNavegador } from "@/lib/supabase/client";
 import { Painel } from "./Painel";
 import { Recepcao } from "./Recepcao";
+import { Sorteio } from "./Sorteio";
 
-type Aba = "recepcao" | "painel";
+type Aba = "recepcao" | "painel" | "sorteio";
 
-const lerAba = (): Aba => (window.location.hash === "#painel" ? "painel" : "recepcao");
+const lerAba = (): Aba =>
+  window.location.hash === "#painel" ? "painel" : window.location.hash === "#sorteio" ? "sorteio" : "recepcao";
 const lerAbaServidor = (): Aba => "recepcao";
 function assinarHash(cb: () => void) {
   window.addEventListener("hashchange", cb);
@@ -28,8 +30,8 @@ export function AreaGestao() {
   const base = useBaseInscritos();
   const perfil = usePerfil();
 
-  // Quem é da recepção não tem o Painel: qualquer tentativa volta para a Recepção.
-  const aba: Aba = abaNaUrl === "painel" && perfil.podeVerPainel ? "painel" : "recepcao";
+  // Quem é da recepção não tem Painel nem Sorteio: qualquer tentativa volta para a Recepção.
+  const aba: Aba = abaNaUrl !== "recepcao" && perfil.podeVerPainel ? abaNaUrl : "recepcao";
 
   useEffect(() => {
     const sb = supabaseNavegador();
@@ -69,6 +71,7 @@ export function AreaGestao() {
     ? [
         ["recepcao", "Recepção"],
         ["painel", "Painel"],
+        ["sorteio", "Sorteio"],
       ]
     : [["recepcao", "Recepção"]];
 
@@ -130,6 +133,8 @@ export function AreaGestao() {
           </div>
         ) : aba === "recepcao" ? (
           <Recepcao base={base} />
+        ) : aba === "sorteio" ? (
+          <Sorteio />
         ) : (
           <Painel base={base} podeExportar={perfil.podeExportar} />
         )}
