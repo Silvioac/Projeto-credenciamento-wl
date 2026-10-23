@@ -77,3 +77,6 @@ Tokens em `theme.ts` (única fonte da verdade):
 - `src/lib/database.types.ts`: gerado pela API do Supabase; regerar após mudar o schema.
 - `tests/rls-anon.test.mjs`: prova que o anônimo só insere. `npm run verificar` roda tudo.
 - Operação e deploy: `LEIA-ME.md`.
+- Out/2026: evento encerrado, projeto Supabase acima EXCLUÍDO e site desligado
+  (`evento.siteAtivo = false` → `src/proxy.ts` responde 503 em tudo). Religar: LEIA-ME,
+  "Religar para a próxima edição".

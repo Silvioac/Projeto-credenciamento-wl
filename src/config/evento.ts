@@ -4,6 +4,12 @@
  * (e as logos em /public) — nada do resto do código conhece a WL.
  */
 export const evento = {
+  /**
+   * false = site fora do ar: toda página responde 503 "fora do ar" (ver src/proxy.ts).
+   * Desligado em out/2026 depois do evento. Para a próxima edição: true + Supabase novo
+   * (passo a passo no LEIA-ME, "Religar para a próxima edição").
+   */
+  siteAtivo: false as boolean,
   /** Nome curto usado em títulos e na credencial. */
   nome: "WL Experience 2026",
   /** Complemento exibido abaixo do nome (edição, tema). */

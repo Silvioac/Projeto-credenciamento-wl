@@ -8,10 +8,12 @@ name: Manter o Supabase ativo
 #   SUPABASE_URL       = https://SEU-PROJETO.supabase.co
 #   SUPABASE_ANON_KEY  = a chave publishable (sb_publishable_...)
 
+# DESLIGADO em out/2026: o projeto Supabase do evento foi excluído. Para religar,
+# descomente o schedule e atualize os segredos com o projeto novo.
 on:
-  schedule:
-    # Todo dia às 15:00 UTC (12:00 em Brasília), longe do cron da Vercel.
-    - cron: "0 15 * * *"
+  # schedule:
+  #   # Todo dia às 15:00 UTC (12:00 em Brasília), longe do cron da Vercel.
+  #   - cron: "0 15 * * *"
   workflow_dispatch: # permite rodar à mão pela aba Actions
 
 jobs:

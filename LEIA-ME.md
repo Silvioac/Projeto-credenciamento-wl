@@ -3,7 +3,13 @@
 Sistema desenvolvido pela **DS TecnoFisio** para inscrição e check-in de participantes.
 Este guia explica como operar no dia do evento, como publicar e como reaproveitar para outros eventos.
 
-**No ar:** https://credenciamento-wl.vercel.app · **Código:** https://github.com/Silvioac/Projeto-credenciamento-wl
+**Endereço:** https://credenciamento-wl.vercel.app · **Código:** https://github.com/Silvioac/Projeto-credenciamento-wl
+
+> **Situação (out/2026): site DESLIGADO.** O evento aconteceu em 17/10/2026, a base foi
+> entregue à WL e o projeto Supabase do evento foi excluído (dados, contas da equipe e
+> lista do sorteio foram junto). O site responde só "fora do ar"; o ping diário do banco
+> (cron da Vercel e GitHub Actions) está desligado. Para a próxima edição, veja
+> **Religar para a próxima edição** no fim deste guia.
 
 ## Endereços
 
@@ -275,6 +281,26 @@ Nada do restante do código conhece a WL. Basta trocar:
 - `public/logo-wl-horizontal.svg` e `public/logo-wl-horizontal-clara.svg` — logos
   (ou aponte outros caminhos em `evento.ts`). Regere os ícones em `public/icons/` se quiser.
 - Um projeto Supabase novo com `schema.sql` executado e um `.env.local` novo.
+
+## Religar para a próxima edição
+
+O código e o projeto da Vercel ficaram preservados. O banco foi excluído e precisa ser
+recriado do zero:
+
+1. **Supabase:** crie um projeto novo (plano gratuito serve) e rode o `schema.sql` inteiro
+   no SQL Editor. Ele cria inscritos, perfis, sorteio, as regras de segurança e as funções.
+2. **Desligue o cadastro público de contas** (Authentication → Sign In / Providers → "Allow
+   new users to sign up" desligado) e crie as contas da equipe (seção *Antes do evento*).
+3. **Chaves:** atualize `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` no
+   `.env.local` e na Vercel (tipo **Config**, não Secret; ver *Publicar*).
+4. **Tipos:** regere `src/lib/database.types.ts` a partir do projeto novo.
+5. **Evento:** em `src/config/evento.ts`, troque nome, data, edição, local e coloque
+   `siteAtivo: true`.
+6. **Ping diário:** devolva o cron em `vercel.json` (`"path": "/api/manter-ativo"`,
+   `"schedule": "0 9 * * *"`), descomente o `schedule` em
+   `.github/workflows/manter-supabase-ativo.yml` e atualize os segredos `SUPABASE_URL` e
+   `SUPABASE_ANON_KEY` no GitHub.
+7. Commit e push: a Vercel publica sozinha. Rode o teste completo (*Antes do evento*, item 5).
 
 ## Comandos
 
